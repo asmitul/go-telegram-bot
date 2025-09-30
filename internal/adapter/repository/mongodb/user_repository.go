@@ -143,15 +143,13 @@ func (r *UserRepository) FindAdminsByGroup(groupID int64) ([]*user.User, error) 
 
 	// 查找 permissions 字段中包含该 groupID 且权限 >= Admin 的用户
 	filter := bson.M{
-		bson.M{
-			"$expr": bson.M{
-				"$gte": []interface{}{
-					bson.M{"$getField": bson.M{
-						"field": groupID,
-						"input": "$permissions",
-					}},
-					int(user.PermissionAdmin),
-				},
+		"$expr": bson.M{
+			"$gte": []interface{}{
+				bson.M{"$getField": bson.M{
+					"field": groupID,
+					"input": "$permissions",
+				}},
+				int(user.PermissionAdmin),
 			},
 		},
 	}

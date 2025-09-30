@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -12,11 +11,13 @@ import (
 	"telegram-bot/internal/adapter/telegram"
 	"telegram-bot/internal/commands/ban"
 	"telegram-bot/internal/commands/ping"
-	"telegram-bot/internal/commands/stats"
 	"telegram-bot/internal/config"
 	"telegram-bot/internal/domain/command"
+	"telegram-bot/internal/domain/group"
+	"telegram-bot/internal/domain/user"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -41,48 +42,41 @@ func main() {
 	userRepo := mongodb.NewUserRepository(db)
 	groupRepo := mongodb.NewGroupRepository(db)
 
-	// 4. 初始化 Telegram Bot
-	bot, err := tgbotapi.NewBotAPI(cfg.TelegramToken)
-	if err != nil {
-		log.Fatalf("Failed to create bot: %v", err)
-	}
-	bot.Debug = cfg.Debug
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	// 5. 初始化 Telegram API 适配器
-	telegramAPI := telegram.NewAPI(bot)
-
-	// 6. 初始化命令注册表
-	registry := command.NewRegistry()
-
-	// 7. 注册命令
-	registerCommands(registry, groupRepo, userRepo, telegramAPI)
-
-	// 8. 初始化中间件
+	// 4. 初始化中间件和注册表（需要在 bot 之前）
 	logger := &SimpleLogger{}
 	permMiddleware := telegram.NewPermissionMiddleware(userRepo, groupRepo)
 	logMiddleware := telegram.NewLoggingMiddleware(logger)
 
-	// 9. 初始化 Bot Handler
-	botHandler := telegram.NewBotHandler(
-		bot,
-		registry,
-		permMiddleware,
-		logMiddleware,
-	)
+	// 初始化命令注册表
+	registry := command.NewRegistry()
 
-	// 10. 启动 Bot
-	ctx, cancel := context.WithCancel(context.Background())
+	// 5. 初始化 Telegram Bot
+	opts := []bot.Option{
+		bot.WithDefaultHandler(func(ctx context.Context, b *bot.Bot, update *models.Update) {
+			// 使用我们的 handler 处理更新
+			telegram.HandleUpdate(ctx, b, update, registry, permMiddleware, logMiddleware)
+		}),
+	}
+
+	telegramBot, err := bot.New(cfg.TelegramToken, opts...)
+	if err != nil {
+		log.Fatalf("Failed to create bot: %v", err)
+	}
+
+	log.Printf("Bot initialized successfully")
+
+	// 6. 初始化 Telegram API 适配器
+	telegramAPI := telegram.NewAPI(telegramBot)
+
+	// 7. 注册命令
+	registerCommands(registry, groupRepo, userRepo, telegramAPI)
+
+	// 8. 启动 Bot
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	// 优雅关闭
-	go handleShutdown(cancel)
-
 	log.Println("Bot is running... Press Ctrl+C to stop")
-	if err := botHandler.Start(ctx); err != nil {
-		log.Fatalf("Bot stopped with error: %v", err)
-	}
+	telegramBot.Start(ctx)
 }
 
 // initMongoDB 初始化 MongoDB 连接
@@ -106,9 +100,9 @@ func initMongoDB(uri string) (*mongo.Client, error) {
 // registerCommands 注册所有命令
 func registerCommands(
 	registry command.Registry,
-	groupRepo groupRepository,
-	userRepo userRepository,
-	api telegram.API,
+	groupRepo group.Repository,
+	userRepo user.Repository,
+	api *telegram.API,
 ) {
 	// Ping 命令
 	registry.Register(ping.NewHandler(groupRepo))
@@ -116,22 +110,10 @@ func registerCommands(
 	// Ban 命令
 	registry.Register(ban.NewHandler(groupRepo, userRepo, api))
 
-	// Stats 命令
-	registry.Register(stats.NewHandler(groupRepo, userRepo))
-
 	// TODO: 在这里注册更多命令
+	// registry.Register(stats.NewHandler(groupRepo, userRepo))
 	// registry.Register(welcome.NewHandler(...))
 	// registry.Register(mute.NewHandler(...))
-}
-
-// handleShutdown 处理优雅关闭
-func handleShutdown(cancel context.CancelFunc) {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	sig := <-sigChan
-	log.Printf("Received signal %v, shutting down gracefully...", sig)
-	cancel()
 }
 
 // SimpleLogger 简单的日志实现

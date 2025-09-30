@@ -1,13 +1,10 @@
 package telegram
 
 import (
-	"context"
 	"fmt"
 	"telegram-bot/internal/domain/command"
 	"telegram-bot/internal/domain/group"
 	"telegram-bot/internal/domain/user"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // Middleware 中间件接口
@@ -143,52 +140,4 @@ func Chain(middlewares ...Middleware) Middleware {
 		}
 		return final
 	}
-}
-
-// ConvertTelegramUpdate 将 Telegram Update 转换为 Command Context
-func ConvertTelegramUpdate(update tgbotapi.Update) *command.Context {
-	if update.Message == nil {
-		return nil
-	}
-
-	msg := update.Message
-	args := parseArgs(msg.CommandArguments())
-
-	return &command.Context{
-		Ctx:       context.Background(),
-		UserID:    msg.From.ID,
-		GroupID:   msg.Chat.ID,
-		MessageID: msg.MessageID,
-		Text:      msg.Text,
-		Args:      args,
-	}
-}
-
-// parseArgs 解析命令参数
-func parseArgs(argsStr string) []string {
-	if argsStr == "" {
-		return []string{}
-	}
-
-	// 简单的空格分割
-	// TODO: 支持引号包裹的参数
-	args := []string{}
-	current := ""
-
-	for _, char := range argsStr {
-		if char == ' ' {
-			if current != "" {
-				args = append(args, current)
-				current = ""
-			}
-		} else {
-			current += string(char)
-		}
-	}
-
-	if current != "" {
-		args = append(args, current)
-	}
-
-	return args
 }

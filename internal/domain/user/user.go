@@ -1,7 +1,12 @@
 package user
 
 import (
+	"errors"
 	"time"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 // Permission 权限等级

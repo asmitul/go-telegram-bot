@@ -1,6 +1,13 @@
 package group
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var (
+	ErrGroupNotFound = errors.New("group not found")
+)
 
 // CommandConfig 命令配置
 type CommandConfig struct {

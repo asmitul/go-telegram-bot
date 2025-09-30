@@ -225,7 +225,7 @@ import (
 
 ## Key Dependencies
 
-- `github.com/go-telegram-bot-api/telegram-bot-api/v5`: Telegram Bot API
+- `github.com/go-telegram/bot`: Telegram Bot API (零依赖，支持 Telegram Bot API 9.2+)
 - `go.mongodb.org/mongo-driver`: MongoDB driver
 - `github.com/prometheus/client_golang`: Prometheus metrics
 - `github.com/sirupsen/logrus`: Structured logging

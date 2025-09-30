@@ -457,7 +457,7 @@ MIT License
 
 ## 🙏 致谢
 
-- [go-telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-api) - Telegram Bot API 库
+- [go-telegram/bot](https://github.com/go-telegram/bot) - Telegram Bot API 库
 - [MongoDB Go Driver](https://github.com/mongodb/mongo-go-driver) - MongoDB 驱动
 - [Prometheus](https://prometheus.io/) - 监控系统
 - [Grafana](https://grafana.com/) - 可视化平台
