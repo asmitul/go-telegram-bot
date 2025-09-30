@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 	"telegram-bot/internal/domain/command"
 
 	"github.com/go-telegram/bot"
@@ -159,6 +160,16 @@ func (a *API) BanChatMember(chatID, userID int64) error {
 	_, err := a.bot.BanChatMember(context.Background(), &bot.BanChatMemberParams{
 		ChatID: chatID,
 		UserID: userID,
+	})
+	return err
+}
+
+// BanChatMemberWithDuration 临时封禁群组成员
+func (a *API) BanChatMemberWithDuration(chatID, userID int64, until time.Time) error {
+	_, err := a.bot.BanChatMember(context.Background(), &bot.BanChatMemberParams{
+		ChatID:         chatID,
+		UserID:         userID,
+		UntilDate:      int(until.Unix()),
 	})
 	return err
 }

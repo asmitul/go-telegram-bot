@@ -5,15 +5,23 @@ import (
 	"telegram-bot/internal/domain/user"
 )
 
+// ReplyToMessage 回复的消息信息
+type ReplyToMessage struct {
+	MessageID int
+	UserID    int64
+	Text      string
+}
+
 // Context 命令执行上下文
 type Context struct {
-	Ctx       context.Context
-	UserID    int64
-	GroupID   int64
-	MessageID int
-	Text      string
-	Args      []string
-	User      *user.User
+	Ctx            context.Context
+	UserID         int64
+	GroupID        int64
+	MessageID      int
+	Text           string
+	Args           []string
+	User           *user.User
+	ReplyToMessage *ReplyToMessage // 回复的消息（如果有）
 }
 
 // Handler 命令处理器接口
