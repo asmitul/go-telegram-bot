@@ -21,6 +21,7 @@ type Config struct {
 	// 应用配置
 	Environment string
 	LogLevel    string
+	LogFormat   string // "text" 或 "json"
 	Port        int
 
 	// 限流配置
@@ -42,6 +43,7 @@ func Load() (*Config, error) {
 		MongoTimeout:     getEnvDuration("MONGO_TIMEOUT", 10*time.Second),
 		Environment:      getEnv("ENVIRONMENT", "development"),
 		LogLevel:         getEnv("LOG_LEVEL", "info"),
+		LogFormat:        getEnv("LOG_FORMAT", "text"),
 		Port:             getEnvInt("PORT", 8080),
 		RateLimitEnabled: getEnvBool("RATE_LIMIT_ENABLED", true),
 		RateLimitPerMin:  getEnvInt("RATE_LIMIT_PER_MIN", 20),

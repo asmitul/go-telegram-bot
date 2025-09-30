@@ -15,6 +15,7 @@ import (
 	"telegram-bot/internal/domain/command"
 	"telegram-bot/internal/domain/group"
 	"telegram-bot/internal/domain/user"
+	"telegram-bot/pkg/logger"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -43,9 +44,15 @@ func main() {
 	groupRepo := mongodb.NewGroupRepository(db)
 
 	// 4. 初始化中间件和注册表（需要在 bot 之前）
-	logger := &SimpleLogger{}
+	// 初始化 Logger
+	appLogger := logger.New(logger.Config{
+		Level:  logger.ParseLevel(cfg.LogLevel),
+		Format: cfg.LogFormat,
+	})
+	appLogger.Info("Logger initialized", "level", cfg.LogLevel, "format", cfg.LogFormat)
+
 	permMiddleware := telegram.NewPermissionMiddleware(userRepo, groupRepo)
-	logMiddleware := telegram.NewLoggingMiddleware(logger)
+	logMiddleware := telegram.NewLoggingMiddleware(appLogger)
 
 	// 初始化命令注册表
 	registry := command.NewRegistry()
@@ -114,15 +121,4 @@ func registerCommands(
 	// registry.Register(stats.NewHandler(groupRepo, userRepo))
 	// registry.Register(welcome.NewHandler(...))
 	// registry.Register(mute.NewHandler(...))
-}
-
-// SimpleLogger 简单的日志实现
-type SimpleLogger struct{}
-
-func (l *SimpleLogger) Info(msg string, fields ...interface{}) {
-	log.Printf("[INFO] %s %v", msg, fields)
-}
-
-func (l *SimpleLogger) Error(msg string, fields ...interface{}) {
-	log.Printf("[ERROR] %s %v", msg, fields)
 }
