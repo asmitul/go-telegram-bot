@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # Telegram Bot
+  bot:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    container_name: telegram-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - MONGO_URI=mongodb://mongodb:27017
+      - DATABASE_NAME=telegram_bot
+      - DEBUG=false
+      - LOG_LEVEL=info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - bot-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: telegram-bot-mongo
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-changeme}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    ports:
+      - "27017:27017"
+    networks:
+      - bot-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Prometheus（监控）
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: telegram-bot-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./../../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - bot-network
+
+  # Grafana（可视化）
+  grafana:
+    image: grafana/grafana:latest
+    container_name: telegram-bot-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./../../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    networks:
+      - bot-network
+    depends_on:
+      - prometheus
+
+  # MongoDB Exporter（导出指标到 Prometheus）
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40
+    container_name: telegram-bot-mongo-exporter
+    restart: unless-stopped
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+    ports:
+      - "9216:9216"
+    networks:
+      - bot-network
+    depends_on:
+      - mongodb
+
+networks:
+  bot-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

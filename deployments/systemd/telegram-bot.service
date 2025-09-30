@@ -1,0 +1,38 @@
+[Unit]
+Description=Telegram Bot Service
+After=network.target mongodb.service
+Wants=mongodb.service
+
+[Service]
+Type=simple
+User=telegram-bot
+Group=telegram-bot
+WorkingDirectory=/opt/telegram-bot
+ExecStart=/opt/telegram-bot/bot-linux
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=telegram-bot
+
+# 环境变量
+EnvironmentFile=/opt/telegram-bot/.env
+
+# 安全加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/telegram-bot
+
+# 资源限制
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# 优雅关闭
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
