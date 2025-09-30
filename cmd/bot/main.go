@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -24,42 +26,54 @@ import (
 )
 
 func main() {
+	// 记录启动时间
+	startTime := time.Now()
+
 	// 1. 加载配置
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 2. 初始化 MongoDB
-	mongoClient, err := initMongoDB(cfg.MongoURI)
-	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
-	}
-	defer mongoClient.Disconnect(context.Background())
-
-	db := mongoClient.Database(cfg.DatabaseName)
-
-	// 3. 初始化仓储
-	userRepo := mongodb.NewUserRepository(db)
-	groupRepo := mongodb.NewGroupRepository(db)
-
-	// 4. 初始化中间件和注册表（需要在 bot 之前）
-	// 初始化 Logger
+	// 2. 初始化 Logger
 	appLogger := logger.New(logger.Config{
 		Level:  logger.ParseLevel(cfg.LogLevel),
 		Format: cfg.LogFormat,
 	})
+	appLogger.Info("🚀 Bot starting...", "version", "1.0.0")
 	appLogger.Info("Logger initialized", "level", cfg.LogLevel, "format", cfg.LogFormat)
 
+	// 3. 初始化 MongoDB
+	mongoClient, err := initMongoDB(cfg.MongoURI)
+	if err != nil {
+		appLogger.Error("Failed to connect to MongoDB", "error", err)
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+	appLogger.Info("✅ MongoDB connected successfully")
+
+	db := mongoClient.Database(cfg.DatabaseName)
+
+	// 4. 初始化仓储
+	userRepo := mongodb.NewUserRepository(db)
+	groupRepo := mongodb.NewGroupRepository(db)
+
+	// 5. 初始化中间件
 	permMiddleware := telegram.NewPermissionMiddleware(userRepo, groupRepo)
 	logMiddleware := telegram.NewLoggingMiddleware(appLogger)
 
-	// 初始化命令注册表
+	// 6. 初始化命令注册表
 	registry := command.NewRegistry()
 
-	// 5. 初始化 Telegram Bot
+	// 7. 初始化 WaitGroup 用于追踪正在处理的命令
+	var wg sync.WaitGroup
+
+	// 8. 初始化 Telegram Bot
 	opts := []bot.Option{
 		bot.WithDefaultHandler(func(ctx context.Context, b *bot.Bot, update *models.Update) {
+			// 增加计数器
+			wg.Add(1)
+			defer wg.Done()
+
 			// 使用我们的 handler 处理更新
 			telegram.HandleUpdate(ctx, b, update, registry, permMiddleware, logMiddleware)
 		}),
@@ -67,23 +81,39 @@ func main() {
 
 	telegramBot, err := bot.New(cfg.TelegramToken, opts...)
 	if err != nil {
+		appLogger.Error("Failed to create bot", "error", err)
 		log.Fatalf("Failed to create bot: %v", err)
 	}
 
-	log.Printf("Bot initialized successfully")
+	appLogger.Info("✅ Telegram Bot initialized successfully")
 
-	// 6. 初始化 Telegram API 适配器
+	// 9. 初始化 Telegram API 适配器
 	telegramAPI := telegram.NewAPI(telegramBot)
 
-	// 7. 注册命令
+	// 10. 注册命令
 	registerCommands(registry, groupRepo, userRepo, telegramAPI)
+	appLogger.Info("✅ Commands registered", "count", len(registry.GetAll()))
 
-	// 8. 启动 Bot
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	// 11. 设置信号处理
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+
+	// 12. 启动 Bot
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log.Println("Bot is running... Press Ctrl+C to stop")
-	telegramBot.Start(ctx)
+	// 在 goroutine 中启动 bot
+	go func() {
+		appLogger.Info("✅ Bot is running", "uptime", time.Since(startTime))
+		telegramBot.Start(ctx)
+	}()
+
+	// 13. 等待退出信号
+	sig := <-sigChan
+	appLogger.Info("📥 Received shutdown signal", "signal", sig.String())
+
+	// 14. 开始优雅关闭
+	shutdown(appLogger, mongoClient, &wg, cancel, startTime)
 }
 
 // initMongoDB 初始化 MongoDB 连接
@@ -102,6 +132,50 @@ func initMongoDB(uri string) (*mongo.Client, error) {
 	}
 
 	return client, nil
+}
+
+// shutdown 优雅关闭
+func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, wg *sync.WaitGroup, cancel context.CancelFunc, startTime time.Time) {
+	appLogger.Info("🛑 Starting graceful shutdown...")
+
+	// 1. 停止接收新的更新
+	cancel()
+	appLogger.Info("✅ Stopped accepting new updates")
+
+	// 2. 等待正在处理的命令完成（最多30秒）
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		appLogger.Info("✅ All pending commands completed")
+	case <-time.After(30 * time.Second):
+		appLogger.Warn("⚠️ Shutdown timeout: some commands may not have completed")
+	}
+
+	// 3. 关闭数据库连接
+	appLogger.Info("Closing database connection...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := mongoClient.Disconnect(ctx); err != nil {
+		appLogger.Error("Failed to close database connection", "error", err)
+	} else {
+		appLogger.Info("✅ Database connection closed")
+	}
+
+	// 4. 输出运行统计
+	uptime := time.Since(startTime)
+	appLogger.Info("📊 Bot Statistics",
+		"total_uptime", uptime.String(),
+		"uptime_seconds", int(uptime.Seconds()),
+	)
+
+	// 5. 最终关闭日志
+	appLogger.Info("👋 Bot shutdown complete. Goodbye!")
 }
 
 // registerCommands 注册所有命令
