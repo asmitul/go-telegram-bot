@@ -1,9 +1,11 @@
 package telegram
 
 import (
+	"context"
 	"errors"
 	"telegram-bot/internal/domain/command"
 	"telegram-bot/internal/domain/user"
+	"telegram-bot/pkg/logger"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -522,8 +524,10 @@ func TestMiddlewareIntegration(t *testing.T) {
 // Mock implementations
 type MockLogger struct {
 	InfoCallCount   int
+	WarnCallCount   int
 	ErrorCallCount  int
 	LastInfoFields  []interface{}
+	LastWarnFields  []interface{}
 	LastErrorFields []interface{}
 }
 
@@ -534,12 +538,29 @@ func (m *MockLogger) Info(msg string, fields ...interface{}) {
 	m.LastInfoFields = fields
 }
 
-func (m *MockLogger) Warn(msg string, fields ...interface{}) {}
+func (m *MockLogger) Warn(msg string, fields ...interface{}) {
+	m.WarnCallCount++
+	m.LastWarnFields = fields
+}
 
 func (m *MockLogger) Error(msg string, fields ...interface{}) {
 	m.ErrorCallCount++
 	m.LastErrorFields = fields
 }
+
+func (m *MockLogger) WithField(key string, value interface{}) logger.Logger {
+	return m
+}
+
+func (m *MockLogger) WithFields(fields map[string]interface{}) logger.Logger {
+	return m
+}
+
+func (m *MockLogger) WithContext(ctx context.Context) logger.Logger {
+	return m
+}
+
+func (m *MockLogger) SetLevel(level logger.Level) {}
 
 type MockRateLimiter struct {
 	AllowResult bool
