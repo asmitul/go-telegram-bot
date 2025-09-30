@@ -9,22 +9,31 @@ import (
 
 // StandardLogger 标准文本格式的日志实现
 type StandardLogger struct {
-	mu         sync.Mutex
-	level      Level
-	output     io.Writer
-	fields     map[string]interface{}
-	timeFormat string
-	addSource  bool
+	mu             sync.Mutex
+	level          Level
+	output         io.Writer
+	fields         map[string]interface{}
+	timeFormat     string
+	addSource      bool
+	enableSanitize bool
+	sanitizer      *Sanitizer
 }
 
 // NewStandardLogger 创建标准 Logger
 func NewStandardLogger(cfg Config) *StandardLogger {
+	var sanitizer *Sanitizer
+	if cfg.EnableSanitize {
+		sanitizer = NewSanitizer()
+	}
+
 	return &StandardLogger{
-		level:      cfg.Level,
-		output:     cfg.Output,
-		fields:     make(map[string]interface{}),
-		timeFormat: cfg.TimeFormat,
-		addSource:  cfg.AddSource,
+		level:          cfg.Level,
+		output:         cfg.Output,
+		fields:         make(map[string]interface{}),
+		timeFormat:     cfg.TimeFormat,
+		addSource:      cfg.AddSource,
+		enableSanitize: cfg.EnableSanitize,
+		sanitizer:      sanitizer,
 	}
 }
 
@@ -40,6 +49,11 @@ func (l *StandardLogger) log(level Level, msg string, fields ...interface{}) {
 	// 构建日志消息
 	timestamp := time.Now().Format(l.timeFormat)
 	levelStr := level.String()
+
+	// 脱敏消息
+	if l.enableSanitize && l.sanitizer != nil {
+		msg = l.sanitizer.Sanitize(msg)
+	}
 
 	// 格式: [2006-01-02 15:04:05] [INFO] message key=value key2=value2
 	output := fmt.Sprintf("[%s] [%s] %s", timestamp, levelStr, msg)
@@ -95,11 +109,13 @@ func (l *StandardLogger) WithField(key string, value interface{}) Logger {
 	newFields[key] = value
 
 	return &StandardLogger{
-		level:      l.level,
-		output:     l.output,
-		fields:     newFields,
-		timeFormat: l.timeFormat,
-		addSource:  l.addSource,
+		level:          l.level,
+		output:         l.output,
+		fields:         newFields,
+		timeFormat:     l.timeFormat,
+		addSource:      l.addSource,
+		enableSanitize: l.enableSanitize,
+		sanitizer:      l.sanitizer,
 	}
 }
 
@@ -109,16 +125,24 @@ func (l *StandardLogger) WithFields(fields map[string]interface{}) Logger {
 	for k, v := range l.fields {
 		newFields[k] = v
 	}
+
+	// 脱敏字段
+	if l.enableSanitize && l.sanitizer != nil {
+		fields = l.sanitizer.SanitizeFields(fields)
+	}
+
 	for k, v := range fields {
 		newFields[k] = v
 	}
 
 	return &StandardLogger{
-		level:      l.level,
-		output:     l.output,
-		fields:     newFields,
-		timeFormat: l.timeFormat,
-		addSource:  l.addSource,
+		level:          l.level,
+		output:         l.output,
+		fields:         newFields,
+		timeFormat:     l.timeFormat,
+		addSource:      l.addSource,
+		enableSanitize: l.enableSanitize,
+		sanitizer:      l.sanitizer,
 	}
 }
 
