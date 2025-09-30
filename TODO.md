@@ -244,12 +244,28 @@
 
 ## 🧪 第六阶段：测试完善
 
-### ✅ Module 20: Mock 生成
+### ✔️ Module 20: Mock 生成 (已完成)
 **文件**: `test/mocks/`
-- [ ] 使用 mockgen 生成 Repository mocks
-- [ ] 生成 Command mocks
-- [ ] 生成 Telegram API mocks
-- [ ] 更新 Makefile mock 命令
+- [x] 使用 mockgen 生成 Repository mocks
+- [x] 生成 Command mocks
+- [x] 生成 Telegram API mocks
+- [x] 生成 UseCase interface mocks
+- [x] 生成 Limiter 和 Health Checker mocks
+- [x] 更新 Makefile mock 命令
+- [x] 更新 install-tools 使用 go.uber.org/mock
+- [x] 添加 gomock 依赖
+> ✅ 完成时间: 2025-10-01
+> 📝 使用 go.uber.org/mock/mockgen 生成了 8 个 mock 文件，共 1143 行代码
+> 🎯 生成的 mocks:
+>   - MockUserRepository (user.Repository)
+>   - MockGroupRepository (group.Repository)
+>   - MockWarningRepository (user.WarningRepository)
+>   - MockHandler / MockRegistry (command interfaces)
+>   - MockUserManagement / MockGroupCommandConfig / MockGroupConfig (usecase interfaces)
+>   - MockTelegramAPI (TelegramAPI interface)
+>   - MockLimiter (ratelimit.Limiter)
+>   - MockChecker (health.Checker)
+> ✅ 所有 mocks 编译通过
 
 ### ✅ Module 21: 单元测试
 **文件**: 各命令的 handler_test.go

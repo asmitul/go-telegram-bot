@@ -99,9 +99,15 @@ vet: ## 运行 go vet
 # Mock 生成
 mock: ## 生成 mock 文件
 	@echo "生成 mock 文件..."
-	@mockgen -source=internal/domain/user/repository.go -destination=test/mocks/user_repository_mock.go -package=mocks
-	@mockgen -source=internal/domain/group/repository.go -destination=test/mocks/group_repository_mock.go -package=mocks
-	@mockgen -source=internal/domain/command/command.go -destination=test/mocks/command_mock.go -package=mocks
+	@mkdir -p test/mocks
+	@$(GOPATH)/bin/mockgen -source=internal/domain/user/user.go -destination=test/mocks/user_repository_mock.go -package=mocks -mock_names=Repository=MockUserRepository
+	@$(GOPATH)/bin/mockgen -source=internal/domain/group/group.go -destination=test/mocks/group_repository_mock.go -package=mocks -mock_names=Repository=MockGroupRepository
+	@$(GOPATH)/bin/mockgen -source=internal/domain/user/warning.go -destination=test/mocks/warning_repository_mock.go -package=mocks
+	@$(GOPATH)/bin/mockgen -source=internal/domain/command/command.go -destination=test/mocks/command_mock.go -package=mocks
+	@$(GOPATH)/bin/mockgen -source=internal/usecase/interfaces.go -destination=test/mocks/usecase_mock.go -package=mocks
+	@$(GOPATH)/bin/mockgen -source=internal/commands/ban/handler.go -destination=test/mocks/telegram_api_mock.go -package=mocks -mock_names=TelegramAPI=MockTelegramAPI
+	@$(GOPATH)/bin/mockgen -source=internal/adapter/ratelimit/limiter.go -destination=test/mocks/limiter_mock.go -package=mocks
+	@$(GOPATH)/bin/mockgen -source=internal/adapter/health/health.go -destination=test/mocks/health_checker_mock.go -package=mocks
 	@echo "✅ Mock 文件生成完成"
 
 # 依赖管理
@@ -140,7 +146,7 @@ install-tools: ## 安装开发工具
 	@echo "安装开发工具..."
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@go install golang.org/x/tools/cmd/goimports@latest
-	@go install github.com/golang/mock/mockgen@latest
+	@go install go.uber.org/mock/mockgen@latest
 	@go install github.com/cosmtrek/air@latest
 	@echo "✅ 工具安装完成"
 
