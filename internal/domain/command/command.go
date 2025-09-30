@@ -2,7 +2,13 @@ package command
 
 import (
 	"context"
+	"errors"
 	"telegram-bot/internal/domain/user"
+)
+
+var (
+	// ErrRateLimitExceeded 限流错误
+	ErrRateLimitExceeded = errors.New("rate limit exceeded")
 )
 
 // ReplyToMessage 回复的消息信息
@@ -41,6 +47,9 @@ type Handler interface {
 	// IsEnabled 是否在该群组启用（可选，默认启用）
 	IsEnabled(groupID int64) bool
 }
+
+// HandlerFunc 命令处理函数类型
+type HandlerFunc func(ctx *Context) error
 
 // Response 命令响应
 type Response struct {
