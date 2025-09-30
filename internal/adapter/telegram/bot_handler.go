@@ -236,3 +236,14 @@ func (a *API) RestrictChatMember(chatID, userID int64, permissions models.ChatPe
 	})
 	return err
 }
+
+// RestrictChatMemberWithDuration 限制群组成员权限（禁言等）带时长
+func (a *API) RestrictChatMemberWithDuration(chatID, userID int64, permissions models.ChatPermissions, until time.Time) error {
+	_, err := a.bot.RestrictChatMember(context.Background(), &bot.RestrictChatMemberParams{
+		ChatID:      chatID,
+		UserID:      userID,
+		Permissions: &permissions,
+		UntilDate:   int(until.Unix()),
+	})
+	return err
+}
