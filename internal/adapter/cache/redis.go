@@ -31,14 +31,14 @@ type RedisConfig struct {
 	WriteTimeout time.Duration
 }
 
-// DefaultRedisConfig 默认 Redis 配置
+// DefaultRedisConfig 默认 Redis 配置（性能优化）
 func DefaultRedisConfig() *RedisConfig {
 	return &RedisConfig{
 		Addr:         "localhost:6379",
 		Password:     "",
 		DB:           0,
-		PoolSize:     10,
-		MinIdleConns: 5,
+		PoolSize:     50,              // 增大连接池 (默认 10 → 50)
+		MinIdleConns: 10,              // 增大最小空闲连接 (5 → 10)
 		MaxRetries:   3,
 		DialTimeout:  5 * time.Second,
 		ReadTimeout:  3 * time.Second,

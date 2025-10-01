@@ -53,6 +53,14 @@ func main() {
 
 	db := mongoClient.Database(cfg.DatabaseName)
 
+	// 3.1. 创建数据库索引（性能优化）
+	indexManager := mongodb.NewIndexManager(db, appLogger)
+	if err := indexManager.EnsureIndexes(context.Background()); err != nil {
+		appLogger.Warn("Failed to create indexes (continuing anyway)", "error", err)
+	} else {
+		appLogger.Info("✅ Database indexes created")
+	}
+
 	// 4. 初始化仓储
 	userRepo := mongodb.NewUserRepository(db)
 	groupRepo := mongodb.NewGroupRepository(db)
@@ -116,12 +124,26 @@ func main() {
 	shutdown(appLogger, mongoClient, &wg, cancel, startTime)
 }
 
-// initMongoDB 初始化 MongoDB 连接
+// initMongoDB 初始化 MongoDB 连接（优化连接池配置）
 func initMongoDB(uri string) (*mongo.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	// 优化的连接池配置
+	clientOpts := options.Client().
+		ApplyURI(uri).
+		SetMaxPoolSize(100).                    // 最大连接数
+		SetMinPoolSize(10).                     // 最小连接数
+		SetMaxConnIdleTime(30 * time.Second).   // 空闲连接超时
+		SetServerSelectionTimeout(5 * time.Second). // 服务器选择超时
+		SetSocketTimeout(10 * time.Second).     // Socket 超时
+		SetConnectTimeout(5 * time.Second).     // 连接超时
+		SetHeartbeatInterval(10 * time.Second). // 心跳间隔
+		SetCompressors([]string{"zstd", "zlib", "snappy"}). // 压缩算法
+		SetRetryWrites(true).                   // 自动重试写入
+		SetRetryReads(true)                     // 自动重试读取
+
+	client, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
 		return nil, err
 	}
