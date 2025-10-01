@@ -17,6 +17,7 @@ import (
 	"telegram-bot/internal/domain/command"
 	"telegram-bot/internal/domain/group"
 	"telegram-bot/internal/domain/user"
+	"telegram-bot/internal/scheduler"
 	"telegram-bot/pkg/logger"
 
 	"github.com/go-telegram/bot"
@@ -102,11 +103,21 @@ func main() {
 	registerCommands(registry, groupRepo, userRepo, telegramAPI)
 	appLogger.Info("✅ Commands registered", "count", len(registry.GetAll()))
 
-	// 11. 设置信号处理
+	// 11. 初始化定时任务调度器
+	taskScheduler := scheduler.NewScheduler(appLogger)
+
+	// 添加定时任务
+	taskScheduler.AddJob(scheduler.NewCleanupExpiredDataJob(db, appLogger))
+	taskScheduler.AddJob(scheduler.NewStatisticsReportJob(userRepo, groupRepo, appLogger))
+	taskScheduler.AddJob(scheduler.NewAutoUnbanJob(db, appLogger))
+
+	appLogger.Info("✅ Scheduler initialized", "jobs", len(taskScheduler.GetJobs()))
+
+	// 12. 设置信号处理
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	// 12. 启动 Bot
+	// 13. 启动 Bot
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -116,12 +127,16 @@ func main() {
 		telegramBot.Start(ctx)
 	}()
 
-	// 13. 等待退出信号
+	// 14. 启动定时任务调度器
+	taskScheduler.Start()
+	appLogger.Info("✅ Scheduler started")
+
+	// 15. 等待退出信号
 	sig := <-sigChan
 	appLogger.Info("📥 Received shutdown signal", "signal", sig.String())
 
-	// 14. 开始优雅关闭
-	shutdown(appLogger, mongoClient, &wg, cancel, startTime)
+	// 16. 开始优雅关闭
+	shutdown(appLogger, mongoClient, taskScheduler, &wg, cancel, startTime)
 }
 
 // initMongoDB 初始化 MongoDB 连接（优化连接池配置）
@@ -157,14 +172,19 @@ func initMongoDB(uri string) (*mongo.Client, error) {
 }
 
 // shutdown 优雅关闭
-func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, wg *sync.WaitGroup, cancel context.CancelFunc, startTime time.Time) {
+func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, taskScheduler *scheduler.Scheduler, wg *sync.WaitGroup, cancel context.CancelFunc, startTime time.Time) {
 	appLogger.Info("🛑 Starting graceful shutdown...")
 
 	// 1. 停止接收新的更新
 	cancel()
 	appLogger.Info("✅ Stopped accepting new updates")
 
-	// 2. 等待正在处理的命令完成（最多30秒）
+	// 2. 停止定时任务调度器
+	appLogger.Info("Stopping scheduler...")
+	taskScheduler.Stop()
+	appLogger.Info("✅ Scheduler stopped")
+
+	// 3. 等待正在处理的命令完成（最多30秒）
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()
@@ -178,7 +198,7 @@ func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, wg *sync.WaitG
 		appLogger.Warn("⚠️ Shutdown timeout: some commands may not have completed")
 	}
 
-	// 3. 关闭数据库连接
+	// 4. 关闭数据库连接
 	appLogger.Info("Closing database connection...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -189,14 +209,14 @@ func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, wg *sync.WaitG
 		appLogger.Info("✅ Database connection closed")
 	}
 
-	// 4. 输出运行统计
+	// 5. 输出运行统计
 	uptime := time.Since(startTime)
 	appLogger.Info("📊 Bot Statistics",
 		"total_uptime", uptime.String(),
 		"uptime_seconds", int(uptime.Seconds()),
 	)
 
-	// 5. 最终关闭日志
+	// 6. 最终关闭日志
 	appLogger.Info("👋 Bot shutdown complete. Goodbye!")
 }
 
