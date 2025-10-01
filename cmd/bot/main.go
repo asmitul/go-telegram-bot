@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -29,6 +30,11 @@ import (
 func main() {
 	// 记录启动时间
 	startTime := time.Now()
+
+	// 0. 加载 .env 文件
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env file not found or could not be loaded: %v", err)
+	}
 
 	// 1. 加载配置
 	cfg, err := config.Load()

@@ -3,7 +3,7 @@
 # 变量
 APP_NAME=telegram-bot
 BINARY_DIR=bin
-DOCKER_COMPOSE=docker-compose -f deployments/docker/docker-compose.yml
+DOCKER_COMPOSE=docker-compose -f deployments/docker/docker-compose.yml --env-file .env
 GO_FILES=$(shell find . -name "*.go" -type f -not -path "./vendor/*")
 
 # 默认目标
