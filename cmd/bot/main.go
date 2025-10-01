@@ -11,7 +11,6 @@ import (
 
 	"telegram-bot/internal/adapter/repository/mongodb"
 	"telegram-bot/internal/adapter/telegram"
-	"telegram-bot/internal/commands/ban"
 	"telegram-bot/internal/commands/ping"
 	"telegram-bot/internal/config"
 	"telegram-bot/internal/domain/command"
@@ -115,7 +114,7 @@ func main() {
 	// 添加定时任务
 	taskScheduler.AddJob(scheduler.NewCleanupExpiredDataJob(db, appLogger))
 	taskScheduler.AddJob(scheduler.NewStatisticsReportJob(userRepo, groupRepo, appLogger))
-	taskScheduler.AddJob(scheduler.NewAutoUnbanJob(db, appLogger))
+	// taskScheduler.AddJob(scheduler.NewAutoUnbanJob(db, appLogger)) // 已禁用
 
 	appLogger.Info("✅ Scheduler initialized", "jobs", len(taskScheduler.GetJobs()))
 
@@ -236,8 +235,8 @@ func registerCommands(
 	// Ping 命令
 	registry.Register(ping.NewHandler(groupRepo))
 
-	// Ban 命令
-	registry.Register(ban.NewHandler(groupRepo, userRepo, api))
+	// Ban 命令（已禁用）
+	// registry.Register(ban.NewHandler(groupRepo, userRepo, api))
 
 	// TODO: 在这里注册更多命令
 	// registry.Register(stats.NewHandler(groupRepo, userRepo))
