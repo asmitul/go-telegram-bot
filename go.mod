@@ -1,8 +1,8 @@
 module telegram-bot
 
-go 1.23.0
+go 1.25
 
-toolchain go1.24.3
+toolchain go1.25.0
 
 require (
 	github.com/go-telegram/bot v1.17.0
