@@ -11,11 +11,13 @@ import (
 
 	"telegram-bot/internal/adapter/repository/mongodb"
 	"telegram-bot/internal/adapter/telegram"
-	"telegram-bot/internal/commands/ping"
 	"telegram-bot/internal/config"
-	"telegram-bot/internal/domain/command"
-	"telegram-bot/internal/domain/group"
-	"telegram-bot/internal/domain/user"
+	"telegram-bot/internal/handler"
+	"telegram-bot/internal/handlers/command"
+	"telegram-bot/internal/handlers/keyword"
+	"telegram-bot/internal/handlers/listener"
+	"telegram-bot/internal/handlers/pattern"
+	"telegram-bot/internal/middleware"
 	"telegram-bot/internal/scheduler"
 	"telegram-bot/pkg/logger"
 
@@ -46,7 +48,7 @@ func main() {
 		Level:  logger.ParseLevel(cfg.LogLevel),
 		Format: cfg.LogFormat,
 	})
-	appLogger.Info("🚀 Bot starting...", "version", "1.0.0")
+	appLogger.Info("🚀 Bot starting...", "version", "2.0.0")
 	appLogger.Info("Logger initialized", "level", cfg.LogLevel, "format", cfg.LogFormat)
 
 	// 3. 初始化 MongoDB
@@ -71,25 +73,44 @@ func main() {
 	userRepo := mongodb.NewUserRepository(db)
 	groupRepo := mongodb.NewGroupRepository(db)
 
-	// 5. 初始化中间件
-	permMiddleware := telegram.NewPermissionMiddleware(userRepo, groupRepo)
-	logMiddleware := telegram.NewLoggingMiddleware(appLogger)
+	// 5. 创建路由器
+	router := handler.NewRouter()
 
-	// 6. 初始化命令注册表
-	registry := command.NewRegistry()
+	// 6. 注册全局中间件（按执行顺序）
+	router.Use(middleware.NewRecoveryMiddleware(appLogger).Middleware())
+	router.Use(middleware.NewLoggingMiddleware(appLogger).Middleware())
+	router.Use(middleware.NewPermissionMiddleware(userRepo).Middleware())
+	// 可选：添加限流中间件
+	// rateLimiter := middleware.NewSimpleRateLimiter(time.Second, 5)
+	// router.Use(middleware.NewRateLimitMiddleware(rateLimiter).Middleware())
 
-	// 7. 初始化 WaitGroup 用于追踪正在处理的命令
+	appLogger.Info("✅ Middlewares registered")
+
+	// 7. 注册处理器
+	registerHandlers(router, groupRepo, userRepo, appLogger)
+	appLogger.Info("✅ Handlers registered", "count", router.Count())
+
+	// 8. 初始化 WaitGroup 用于追踪正在处理的消息
 	var wg sync.WaitGroup
 
-	// 8. 初始化 Telegram Bot
+	// 9. 初始化 Telegram Bot
 	opts := []bot.Option{
 		bot.WithDefaultHandler(func(ctx context.Context, b *bot.Bot, update *models.Update) {
 			// 增加计数器
 			wg.Add(1)
 			defer wg.Done()
 
-			// 使用我们的 handler 处理更新
-			telegram.HandleUpdate(ctx, b, update, registry, permMiddleware, logMiddleware)
+			// 转换为 Handler Context
+			handlerCtx := telegram.ConvertUpdate(ctx, b, update)
+			if handlerCtx == nil {
+				return // 不是消息更新，忽略
+			}
+
+			// 路由消息
+			if err := router.Route(handlerCtx); err != nil {
+				appLogger.Error("route_error", "error", err)
+				handlerCtx.Reply("❌ 处理消息时出错，请稍后再试")
+			}
 		}),
 	}
 
@@ -101,28 +122,20 @@ func main() {
 
 	appLogger.Info("✅ Telegram Bot initialized successfully")
 
-	// 9. 初始化 Telegram API 适配器
-	telegramAPI := telegram.NewAPI(telegramBot)
-
-	// 10. 注册命令
-	registerCommands(registry, groupRepo, userRepo, telegramAPI)
-	appLogger.Info("✅ Commands registered", "count", len(registry.GetAll()))
-
-	// 11. 初始化定时任务调度器
+	// 10. 初始化定时任务调度器
 	taskScheduler := scheduler.NewScheduler(appLogger)
 
 	// 添加定时任务
 	taskScheduler.AddJob(scheduler.NewCleanupExpiredDataJob(db, appLogger))
 	taskScheduler.AddJob(scheduler.NewStatisticsReportJob(userRepo, groupRepo, appLogger))
-	// taskScheduler.AddJob(scheduler.NewAutoUnbanJob(db, appLogger)) // 已禁用
 
 	appLogger.Info("✅ Scheduler initialized", "jobs", len(taskScheduler.GetJobs()))
 
-	// 12. 设置信号处理
+	// 11. 设置信号处理
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	// 13. 启动 Bot
+	// 12. 启动 Bot
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -132,15 +145,15 @@ func main() {
 		telegramBot.Start(ctx)
 	}()
 
-	// 14. 启动定时任务调度器
+	// 13. 启动定时任务调度器
 	taskScheduler.Start()
 	appLogger.Info("✅ Scheduler started")
 
-	// 15. 等待退出信号
+	// 14. 等待退出信号
 	sig := <-sigChan
 	appLogger.Info("📥 Received shutdown signal", "signal", sig.String())
 
-	// 16. 开始优雅关闭
+	// 15. 开始优雅关闭
 	shutdown(appLogger, mongoClient, taskScheduler, &wg, cancel, startTime)
 }
 
@@ -152,16 +165,16 @@ func initMongoDB(uri string) (*mongo.Client, error) {
 	// 优化的连接池配置
 	clientOpts := options.Client().
 		ApplyURI(uri).
-		SetMaxPoolSize(100).                    // 最大连接数
-		SetMinPoolSize(10).                     // 最小连接数
-		SetMaxConnIdleTime(30 * time.Second).   // 空闲连接超时
-		SetServerSelectionTimeout(5 * time.Second). // 服务器选择超时
-		SetSocketTimeout(10 * time.Second).     // Socket 超时
-		SetConnectTimeout(5 * time.Second).     // 连接超时
-		SetHeartbeatInterval(10 * time.Second). // 心跳间隔
-		SetCompressors([]string{"zstd", "zlib", "snappy"}). // 压缩算法
-		SetRetryWrites(true).                   // 自动重试写入
-		SetRetryReads(true)                     // 自动重试读取
+		SetMaxPoolSize(100).                                        // 最大连接数
+		SetMinPoolSize(10).                                         // 最小连接数
+		SetMaxConnIdleTime(30 * time.Second).                       // 空闲连接超时
+		SetServerSelectionTimeout(5 * time.Second).                 // 服务器选择超时
+		SetSocketTimeout(10 * time.Second).                         // Socket 超时
+		SetConnectTimeout(5 * time.Second).                         // 连接超时
+		SetHeartbeatInterval(10 * time.Second).                     // 心跳间隔
+		SetCompressors([]string{"zstd", "zlib", "snappy"}).         // 压缩算法
+		SetRetryWrites(true).                                       // 自动重试写入
+		SetRetryReads(true)                                         // 自动重试读取
 
 	client, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
@@ -198,9 +211,9 @@ func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, taskScheduler 
 
 	select {
 	case <-done:
-		appLogger.Info("✅ All pending commands completed")
+		appLogger.Info("✅ All pending messages completed")
 	case <-time.After(30 * time.Second):
-		appLogger.Warn("⚠️ Shutdown timeout: some commands may not have completed")
+		appLogger.Warn("⚠️ Shutdown timeout: some messages may not have completed")
 	}
 
 	// 4. 关闭数据库连接
@@ -225,21 +238,32 @@ func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, taskScheduler 
 	appLogger.Info("👋 Bot shutdown complete. Goodbye!")
 }
 
-// registerCommands 注册所有命令
-func registerCommands(
-	registry command.Registry,
-	groupRepo group.Repository,
-	userRepo user.Repository,
-	api *telegram.API,
+// registerHandlers 注册所有处理器
+func registerHandlers(
+	router *handler.Router,
+	groupRepo *mongodb.GroupRepository,
+	userRepo *mongodb.UserRepository,
+	appLogger logger.Logger,
 ) {
-	// Ping 命令
-	registry.Register(ping.NewHandler(groupRepo))
+	// 1. 命令处理器（优先级 100）
+	router.Register(command.NewPingHandler(groupRepo))
+	router.Register(command.NewHelpHandler(groupRepo, router))
+	router.Register(command.NewStatsHandler(groupRepo, userRepo))
 
-	// Ban 命令（已禁用）
-	// registry.Register(ban.NewHandler(groupRepo, userRepo, api))
+	// 2. 关键词处理器（优先级 200）
+	router.Register(keyword.NewGreetingHandler())
 
-	// TODO: 在这里注册更多命令
-	// registry.Register(stats.NewHandler(groupRepo, userRepo))
-	// registry.Register(welcome.NewHandler(...))
-	// registry.Register(mute.NewHandler(...))
+	// 3. 正则处理器（优先级 300）
+	router.Register(pattern.NewWeatherHandler())
+
+	// 4. 监听器（优先级 900+）
+	router.Register(listener.NewMessageLoggerHandler(appLogger))
+	router.Register(listener.NewAnalyticsHandler())
+
+	appLogger.Info("Registered handlers breakdown",
+		"commands", 3,
+		"keywords", 1,
+		"patterns", 1,
+		"listeners", 2,
+	)
 }
