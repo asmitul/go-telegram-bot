@@ -250,6 +250,13 @@ func registerHandlers(
 	router.Register(command.NewHelpHandler(groupRepo, router))
 	router.Register(command.NewStatsHandler(groupRepo, userRepo))
 
+	// 权限管理命令
+	router.Register(command.NewPromoteHandler(groupRepo, userRepo))
+	router.Register(command.NewDemoteHandler(groupRepo, userRepo))
+	router.Register(command.NewSetPermHandler(groupRepo, userRepo))
+	router.Register(command.NewListAdminsHandler(groupRepo, userRepo))
+	router.Register(command.NewMyPermHandler(groupRepo))
+
 	// 2. 关键词处理器（优先级 200）
 	router.Register(keyword.NewGreetingHandler())
 
@@ -261,7 +268,7 @@ func registerHandlers(
 	router.Register(listener.NewAnalyticsHandler())
 
 	appLogger.Info("Registered handlers breakdown",
-		"commands", 3,
+		"commands", 8,
 		"keywords", 1,
 		"patterns", 1,
 		"listeners", 2,

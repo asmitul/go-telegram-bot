@@ -2,10 +2,19 @@ package command
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"telegram-bot/internal/domain/user"
 	"telegram-bot/internal/handler"
 )
+
+// CommandInfo 命令信息接口
+// 所有嵌入 BaseCommand 的命令处理器都实现了此接口
+type CommandInfo interface {
+	GetName() string
+	GetDescription() string
+	GetPermission() user.Permission
+}
 
 // HelpHandler Help 命令处理器
 type HelpHandler struct {
@@ -37,23 +46,97 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
 	var sb strings.Builder
 	sb.WriteString("📖 *可用命令列表*\n\n")
 
-	// 遍历所有处理器，找出命令
-	handlers := h.router.GetHandlers()
-	for _, hdlr := range handlers {
-		// 只显示命令类型的处理器
-		if cmd, ok := hdlr.(*PingHandler); ok {
-			sb.WriteString(h.formatCommand(cmd.GetName(), cmd.GetDescription(), cmd.GetPermission()))
-		} else if cmd, ok := hdlr.(*HelpHandler); ok {
-			sb.WriteString(h.formatCommand(cmd.GetName(), cmd.GetDescription(), cmd.GetPermission()))
-		} else if cmd, ok := hdlr.(*StatsHandler); ok {
-			sb.WriteString(h.formatCommand(cmd.GetName(), cmd.GetDescription(), cmd.GetPermission()))
+	// 获取所有命令信息
+	commands := h.getCommands()
+
+	// 按权限等级分组显示
+	userCommands := []string{}
+	adminCommands := []string{}
+	superAdminCommands := []string{}
+	ownerCommands := []string{}
+
+	for _, cmd := range commands {
+		formattedCmd := h.formatCommand(cmd.Name, cmd.Description, cmd.Permission)
+		switch cmd.Permission {
+		case user.PermissionOwner:
+			ownerCommands = append(ownerCommands, formattedCmd)
+		case user.PermissionSuperAdmin:
+			superAdminCommands = append(superAdminCommands, formattedCmd)
+		case user.PermissionAdmin:
+			adminCommands = append(adminCommands, formattedCmd)
+		default:
+			userCommands = append(userCommands, formattedCmd)
 		}
-		// 可以继续添加其他命令类型...
 	}
 
-	sb.WriteString("\n💡 提示：使用 `/命令名` 执行命令")
+	// 输出各级别命令
+	if len(userCommands) > 0 {
+		sb.WriteString("✅ *基础命令*\n")
+		for _, cmd := range userCommands {
+			sb.WriteString(cmd)
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(adminCommands) > 0 {
+		sb.WriteString("🔧 *管理员命令*\n")
+		for _, cmd := range adminCommands {
+			sb.WriteString(cmd)
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(superAdminCommands) > 0 {
+		sb.WriteString("⭐ *超级管理员命令*\n")
+		for _, cmd := range superAdminCommands {
+			sb.WriteString(cmd)
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(ownerCommands) > 0 {
+		sb.WriteString("👑 *群主命令*\n")
+		for _, cmd := range ownerCommands {
+			sb.WriteString(cmd)
+		}
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("💡 提示：使用 `/命令名` 执行命令")
 
 	return ctx.ReplyMarkdown(sb.String())
+}
+
+// CommandData 命令数据
+type CommandData struct {
+	Name        string
+	Description string
+	Permission  user.Permission
+}
+
+// getCommands 获取所有命令信息
+func (h *HelpHandler) getCommands() []CommandData {
+	commands := []CommandData{}
+
+	// 遍历所有处理器
+	handlers := h.router.GetHandlers()
+	for _, hdlr := range handlers {
+		// 尝试类型断言为 CommandInfo 接口
+		if cmdInfo, ok := hdlr.(CommandInfo); ok {
+			commands = append(commands, CommandData{
+				Name:        cmdInfo.GetName(),
+				Description: cmdInfo.GetDescription(),
+				Permission:  cmdInfo.GetPermission(),
+			})
+		}
+	}
+
+	// 按命令名排序
+	sort.Slice(commands, func(i, j int) bool {
+		return commands[i].Name < commands[j].Name
+	})
+
+	return commands
 }
 
 func (h *HelpHandler) formatCommand(name, desc string, perm user.Permission) string {

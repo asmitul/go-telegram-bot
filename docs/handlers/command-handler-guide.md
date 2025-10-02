@@ -1056,7 +1056,95 @@ func (h *CleanupHandler) Handle(ctx *handler.Context) error {
 }
 ```
 
-### 场景 4：异步操作
+### 场景 4：权限管理命令
+
+```go
+package command
+
+import (
+	"fmt"
+	"telegram-bot/internal/domain/user"
+	"telegram-bot/internal/handler"
+)
+
+type PromoteHandler struct {
+	*BaseCommand
+	userRepo UserRepository
+}
+
+func NewPromoteHandler(groupRepo GroupRepository, userRepo UserRepository) *PromoteHandler {
+	return &PromoteHandler{
+		BaseCommand: NewBaseCommand(
+			"promote",
+			"提升用户权限一级",
+			user.PermissionSuperAdmin,
+			[]string{"group", "supergroup"},
+			groupRepo,
+		),
+		userRepo: userRepo,
+	}
+}
+
+func (h *PromoteHandler) Handle(ctx *handler.Context) error {
+	// 1. 检查权限
+	if err := h.CheckPermission(ctx); err != nil {
+		return err
+	}
+
+	// 2. 获取目标用户（从参数或回复消息）
+	targetUser, err := GetTargetUser(ctx, h.userRepo)
+	if err != nil {
+		return ctx.Reply(fmt.Sprintf("❌ %s", err.Error()))
+	}
+
+	// 3. 获取当前权限
+	currentPerm := targetUser.GetPermission(ctx.ChatID)
+
+	// 4. 计算新权限
+	newPerm := currentPerm + 1
+	if newPerm > user.PermissionOwner {
+		return ctx.Reply("❌ 用户已是最高权限")
+	}
+
+	// 5. 权限保护：不能提升到比自己高的等级
+	if !ctx.User.HasPermission(ctx.ChatID, newPerm) {
+		return ctx.Reply(fmt.Sprintf("❌ 您无权提升用户到 %s 等级", newPerm.String()))
+	}
+
+	// 6. 设置新权限
+	targetUser.SetPermission(ctx.ChatID, newPerm)
+
+	// 7. 保存到数据库
+	if err := h.userRepo.Update(targetUser); err != nil {
+		return ctx.Reply("❌ 权限更新失败")
+	}
+
+	// 8. 成功反馈
+	return ctx.Reply(fmt.Sprintf("✅ 用户 %s 权限已提升: %s → %s",
+		FormatUsername(targetUser), currentPerm.String(), newPerm.String()))
+}
+```
+
+**辅助函数**（`permission_helpers.go`）：
+```go
+func GetTargetUser(ctx *handler.Context, userRepo UserRepository) (*user.User, error) {
+	// 方式 1: 从参数获取 @username
+	args := ParseArgs(ctx.Text)
+	if len(args) > 0 {
+		username := strings.TrimPrefix(args[0], "@")
+		return userRepo.FindByUsername(username)
+	}
+
+	// 方式 2: 从回复消息获取
+	if ctx.ReplyTo != nil {
+		return userRepo.FindByID(ctx.ReplyTo.UserID)
+	}
+
+	return nil, fmt.Errorf("未指定目标用户")
+}
+```
+
+### 场景 5：异步操作
 
 ```go
 package command

@@ -611,5 +611,41 @@ Bot:
 
 **创建日期**: 2025-10-02
 **最后更新**: 2025-10-02
-**负责人**: 待分配
-**状态**: 待实现
+**负责人**: Claude Code
+**状态**: ✅ 已完成
+
+---
+
+## ✅ 实现完成记录
+
+### 完成时间
+2025-10-02
+
+### 实现文件清单
+
+**新建文件（6个）:**
+- ✅ `internal/handlers/command/permission_helpers.go` - 辅助函数
+- ✅ `internal/handlers/command/promote.go` - 提升权限命令
+- ✅ `internal/handlers/command/demote.go` - 降低权限命令
+- ✅ `internal/handlers/command/setperm.go` - 设置权限命令
+- ✅ `internal/handlers/command/listadmins.go` - 管理员列表命令
+- ✅ `internal/handlers/command/myperm.go` - 查看自己权限命令
+
+**修改文件（2个）:**
+- ✅ `internal/handlers/command/base.go` - 扩展了 UserRepository 接口
+- ✅ `cmd/bot/main.go` - 注册了 5 个新命令
+
+### 验证结果
+
+- ✅ 编译成功（`make build`）
+- ✅ 所有测试通过（`go test ./...`）
+- ✅ 代码遵循项目规范和架构
+- ✅ 所有权限保护机制已实现
+- ✅ 错误处理完善
+
+### 文档更新
+
+- ✅ README.md - 添加权限管理功能描述
+- ✅ CLAUDE.md - 添加权限管理命令章节
+- ✅ docs/handlers/command-handler-guide.md - 添加权限管理示例
+- ✅ docs/getting-started.md - 添加权限管理使用说明

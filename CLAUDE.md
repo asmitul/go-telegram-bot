@@ -348,6 +348,57 @@ func (h *MyHandler) Handle(ctx *handler.Context) error {
 }
 ```
 
+## Permission Management Commands
+
+The bot includes built-in commands for managing user permissions:
+
+### 1. `/promote` - Promote User Permission
+- **Permission Required**: SuperAdmin
+- **Usage**: `/promote @username` or reply to a message with `/promote`
+- **Function**: Promotes user permission by one level (User → Admin → SuperAdmin → Owner)
+- **Protection**: Cannot promote to a level higher than your own
+
+### 2. `/demote` - Demote User Permission
+- **Permission Required**: SuperAdmin
+- **Usage**: `/demote @username` or reply to a message with `/demote`
+- **Function**: Demotes user permission by one level
+- **Protection**: Cannot demote users with equal or higher permission
+
+### 3. `/setperm` - Set User Permission
+- **Permission Required**: Owner
+- **Usage**: `/setperm @username <user|admin|superadmin|owner>`
+- **Function**: Directly sets user permission to the specified level
+- **Example**: `/setperm @alice admin`
+
+### 4. `/listadmins` - List All Admins
+- **Permission Required**: User (everyone can view)
+- **Usage**: `/listadmins`
+- **Function**: Displays all admins grouped by permission level (Owner, SuperAdmin, Admin)
+
+### 5. `/myperm` - View Own Permission
+- **Permission Required**: User (everyone can view)
+- **Usage**: `/myperm`
+- **Function**: Shows your current permission level and capabilities in the current group
+
+**Example usage:**
+```
+User: /promote @bob
+Bot: ✅ User @bob permission promoted: User → Admin 🛡
+
+User: /listadmins
+Bot:
+👥 Current Group Admin List:
+
+👑 Owner (1):
+  • @alice
+
+🛡 Admin (2):
+  • @bob
+  • @charlie
+
+Total: 3 admins
+```
+
 ## Command Enable/Disable System
 
 Groups can disable specific commands:

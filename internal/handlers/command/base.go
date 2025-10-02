@@ -15,7 +15,10 @@ type GroupRepository interface {
 // UserRepository 用户仓储接口（简化版）
 type UserRepository interface {
 	FindByID(id int64) (*user.User, error)
+	FindByUsername(username string) (*user.User, error)
 	Save(user *user.User) error
+	Update(user *user.User) error
+	FindAdminsByGroup(groupID int64) ([]*user.User, error)
 }
 
 // BaseCommand 命令处理器基类
