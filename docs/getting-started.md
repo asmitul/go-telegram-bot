@@ -127,6 +127,9 @@ MONGO_URI=mongodb://localhost:27017
 DATABASE_NAME=telegram_bot
 LOG_LEVEL=info
 LOG_FORMAT=json
+
+# 可选但推荐：配置初始Owner
+BOT_OWNER_IDS=<你的_user_id>     # 你的 Telegram User ID
 ```
 
 **如何获取 Bot Token**：
@@ -135,6 +138,17 @@ LOG_FORMAT=json
 3. 按提示设置机器人名称和用户名
 4. 获得类似 `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` 的 Token
 5. 复制到 `.env` 文件的 `TELEGRAM_TOKEN` 中
+
+**如何获取你的 User ID**：
+1. 在 Telegram 中搜索 [@userinfobot](https://t.me/userinfobot)
+2. 点击 Start 或发送任何消息
+3. 机器人会返回你的 User ID（一串数字）
+4. 复制到 `.env` 文件的 `BOT_OWNER_IDS` 中
+
+**配置多个Owner**（可选）：
+```bash
+BOT_OWNER_IDS=123456789,987654321  # 用逗号分隔多个ID
+```
 
 ### 3. 安装依赖
 
@@ -590,6 +604,30 @@ Bot:
 1. **不能越级操作**：Admin 无法提升用户到 SuperAdmin
 2. **不能降低比自己高的用户**：SuperAdmin 无法降低 Owner
 3. **Owner 特殊权限**：只有 Owner 可以使用 `/setperm` 命令
+
+### 配置初始Owner
+
+**推荐方式：通过环境变量配置**
+
+在 `.env` 文件中设置你的 Telegram User ID：
+
+```bash
+# 单个Owner
+BOT_OWNER_IDS=123456789
+
+# 多个Owner（用逗号分隔）
+BOT_OWNER_IDS=123456789,987654321
+```
+
+**获取你的 User ID**：
+1. 在Telegram搜索 [@userinfobot](https://t.me/userinfobot)
+2. 发送任何消息给它
+3. 机器人返回你的ID
+
+**自动授权机制**：
+- 当配置的Owner首次使用机器人时，自动获得Owner权限
+- 已存在的用户在发送消息时会自动升级为Owner
+- 重启机器人后配置立即生效
 
 ---
 

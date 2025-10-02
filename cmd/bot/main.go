@@ -79,7 +79,7 @@ func main() {
 	// 6. 注册全局中间件（按执行顺序）
 	router.Use(middleware.NewRecoveryMiddleware(appLogger).Middleware())
 	router.Use(middleware.NewLoggingMiddleware(appLogger).Middleware())
-	router.Use(middleware.NewPermissionMiddleware(userRepo).Middleware())
+	router.Use(middleware.NewPermissionMiddleware(userRepo, cfg.OwnerUserIDs).Middleware())
 	// 可选：添加限流中间件
 	// rateLimiter := middleware.NewSimpleRateLimiter(time.Second, 5)
 	// router.Use(middleware.NewRateLimitMiddleware(rateLimiter).Middleware())

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -31,6 +32,9 @@ type Config struct {
 	// 监控配置
 	MetricsEnabled bool
 	MetricsPort    int
+
+	// 权限配置
+	OwnerUserIDs []int64 // 初始Owner用户ID列表
 }
 
 // Load 加载配置
@@ -49,6 +53,7 @@ func Load() (*Config, error) {
 		RateLimitPerMin:  getEnvInt("RATE_LIMIT_PER_MIN", 20),
 		MetricsEnabled:   getEnvBool("METRICS_ENABLED", true),
 		MetricsPort:      getEnvInt("METRICS_PORT", 9091),
+		OwnerUserIDs:     getEnvInt64Slice("BOT_OWNER_IDS", []int64{}),
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -121,4 +126,32 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 		}
 	}
 	return defaultValue
+}
+
+// getEnvInt64Slice 获取int64切片类型环境变量（逗号分隔）
+func getEnvInt64Slice(key string, defaultValue []int64) []int64 {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	// 按逗号分隔
+	parts := strings.Split(value, ",")
+	result := make([]int64, 0, len(parts))
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		id, err := strconv.ParseInt(part, 10, 64)
+		if err != nil {
+			// 忽略无效的ID
+			continue
+		}
+		result = append(result, id)
+	}
+
+	return result
 }
