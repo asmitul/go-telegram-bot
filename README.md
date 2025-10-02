@@ -1,70 +1,144 @@
-# Telegram Bot - 生产级清洁架构
+# Telegram Bot - 统一消息处理架构
 
-一个基于 Go 语言的生产级 Telegram 机器人，采用清洁架构设计，支持模块化命令、权限管理和完整的 DevOps 流程。
+一个基于 Go 语言的生产级 Telegram 机器人，采用统一的 Handler 架构，支持命令、关键词、正则匹配和消息监听。支持私聊、群组、超级群组和频道所有聊天类型。
 
-## ✨ 特性
+## ✨ 核心特性
 
-- 🏗️ **清洁架构**：领域驱动设计，层次分明，易于测试和维护
-- 🔐 **多级权限系统**：超级管理员、高级管理员、普通管理员三级权限
-- 🧩 **模块化命令**：每个命令独立模块，可单独开关
-- 🔄 **可配置性**：每个群组可独立配置命令开关
-- 🧪 **高测试覆盖率**：单元测试、集成测试、Mock 支持
-- 🐳 **Docker 支持**：完整的容器化方案
-- 📊 **监控告警**：Prometheus + Grafana 监控体系
-- 🚀 **CI/CD**：GitHub Actions 自动化部署
-- 📝 **完整文档**：代码注释、API 文档齐全
+### 🎯 统一消息处理
+- **四种处理器类型**：命令、关键词、正则、监听器
+- **全聊天类型支持**：私聊、群组、超级群组、频道
+- **灵活匹配机制**：每个处理器自主决定是否处理消息
+- **优先级控制**：自动按优先级排序执行
 
-## 🏛️ 架构设计
+### 🔐 权限系统
+- **多级权限**：User、Admin、SuperAdmin、Owner
+- **群组隔离**：每个用户在不同群组有不同权限
+- **自动检查**：中间件自动加载用户和检查权限
+
+### 🛡️ 中间件系统
+- **错误恢复**：捕获 panic 防止程序崩溃
+- **日志记录**：自动记录所有消息处理
+- **权限管理**：自动加载用户信息
+- **限流保护**：令牌桶算法防止滥用
+
+### 📊 监控与运维
+- **Prometheus 指标**：消息量、延迟、错误率
+- **Grafana 仪表板**：可视化监控
+- **健康检查**：应用和数据库状态
+- **优雅关闭**：处理中的消息不丢失
+
+## 🏗️ 架构设计
 
 ```
-├── Domain Layer（领域层）
-│   ├── User Aggregate（用户聚合根）
-│   ├── Group Aggregate（群组聚合根）
-│   └── Command Interface（命令接口）
-│
-├── Use Case Layer（用例层）
-│   ├── Permission Check（权限检查）
-│   ├── Command Configuration（命令配置）
-│   └── User Management（用户管理）
-│
-├── Adapter Layer（适配器层）
-│   ├── MongoDB Repository（数据持久化）
-│   ├── Telegram API（消息收发）
-│   └── Logger（日志记录）
-│
-└── Commands（命令模块）
-    ├── Ping（测试命令）
-    ├── Ban（封禁命令）
-    ├── Stats（统计命令）
-    └── ... （更多命令）
+┌─────────────────────────────────────────────────────────┐
+│                   Telegram Update                        │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│              Converter (Update → Context)                │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│                    Router.Route()                        │
+│  • 获取所有处理器                                          │
+│  • 按优先级排序                                            │
+│  • 逐个执行匹配的处理器                                     │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+         ┌────────┴────────┐
+         │                 │
+         ▼                 ▼
+    Match(ctx)?       ContinueChain()?
+         │                 │
+         ├─ Yes           Yes → Next Handler
+         │                No  → Stop
+         ▼
+  ┌──────────────┐
+  │ Middleware   │
+  │  Recovery    │
+  │  Logging     │
+  │  Permission  │
+  └──────┬───────┘
+         │
+         ▼
+    Handle(ctx)
 ```
 
-## 📦 快速开始
+## 📦 目录结构
+
+```
+internal/
+├── handler/              # 核心框架
+│   ├── handler.go        # Handler 接口定义
+│   ├── context.go        # 消息上下文
+│   ├── router.go         # 消息路由器
+│   └── middleware.go     # 中间件基础
+│
+├── handlers/             # 处理器实现
+│   ├── command/          # 命令处理器 (Priority: 100)
+│   │   ├── base.go       # 命令基类
+│   │   ├── ping.go       # /ping 命令
+│   │   ├── help.go       # /help 命令
+│   │   └── stats.go      # /stats 命令
+│   │
+│   ├── keyword/          # 关键词处理器 (Priority: 200)
+│   │   └── greeting.go   # 问候语处理
+│   │
+│   ├── pattern/          # 正则处理器 (Priority: 300)
+│   │   └── weather.go    # 天气查询
+│   │
+│   └── listener/         # 监听器 (Priority: 900+)
+│       ├── message_logger.go  # 消息日志
+│       └── analytics.go       # 数据分析
+│
+├── middleware/           # 中间件
+│   ├── recovery.go       # 错误恢复
+│   ├── logging.go        # 日志记录
+│   ├── permission.go     # 权限检查
+│   └── ratelimit.go      # 限流控制
+│
+├── domain/               # 领域模型
+│   ├── user/             # 用户聚合根
+│   └── group/            # 群组聚合根
+│
+└── adapter/              # 外部适配器
+    ├── telegram/         # Telegram 适配
+    └── repository/       # 数据持久化
+```
+
+## 🚀 快速开始
 
 ### 前置要求
 
 - Go 1.21+
-- Docker & Docker Compose
-- Make
+- MongoDB 4.4+
+- Docker & Docker Compose (可选)
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/telegram-bot.git
-cd telegram-bot
+git clone <your-repo-url>
+cd go-telegram-bot
 ```
 
-### 2. 配置环境变量
+### 2. 配置环境
 
 ```bash
+# 复制配置模板
 cp .env.example .env
-# 编辑 .env 文件，填入你的 Telegram Bot Token
+
+# 编辑 .env 文件，填入你的配置
+# TELEGRAM_TOKEN=your_bot_token_here
+# MONGO_URI=mongodb://localhost:27017
 ```
 
-### 3. 本地开发（使用 Docker）
+### 3. 使用 Docker 运行（推荐）
 
 ```bash
-# 启动所有服务（Bot + MongoDB + Prometheus + Grafana）
+# 启动所有服务
 make docker-up
 
 # 查看日志
@@ -74,20 +148,127 @@ make docker-logs
 make docker-down
 ```
 
-### 4. 本地开发（不使用 Docker）
+访问监控面板：
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (admin/admin)
+
+### 4. 本地开发
 
 ```bash
 # 安装依赖
-make deps
+go mod download
 
 # 运行测试
 make test
 
-# 构建应用
+# 编译
 make build
 
-# 运行应用
-make run
+# 运行
+./bin/bot
+```
+
+## 💻 开发指南
+
+### 添加命令处理器
+
+```go
+// internal/handlers/command/hello.go
+package command
+
+import (
+	"telegram-bot/internal/domain/user"
+	"telegram-bot/internal/handler"
+)
+
+type HelloHandler struct {
+	*BaseCommand
+}
+
+func NewHelloHandler(groupRepo GroupRepository) *HelloHandler {
+	return &HelloHandler{
+		BaseCommand: NewBaseCommand(
+			"hello",                       // 命令名
+			"Say hello",                   // 描述
+			user.PermissionUser,           // 所需权限
+			[]string{"private", "group"},  // 支持的聊天类型
+			groupRepo,
+		),
+	}
+}
+
+func (h *HelloHandler) Handle(ctx *handler.Context) error {
+	// 权限已由 BaseCommand 检查
+	return ctx.Reply("Hello, " + ctx.FirstName + "!")
+}
+```
+
+**注册到 main.go:**
+```go
+router.Register(command.NewHelloHandler(groupRepo))
+```
+
+### 添加关键词处理器
+
+```go
+// internal/handlers/keyword/thanks.go
+package keyword
+
+type ThanksHandler struct {
+	keywords []string
+}
+
+func NewThanksHandler() *ThanksHandler {
+	return &ThanksHandler{
+		keywords: []string{"谢谢", "thanks"},
+	}
+}
+
+func (h *ThanksHandler) Match(ctx *handler.Context) bool {
+	text := strings.ToLower(ctx.Text)
+	for _, kw := range h.keywords {
+		if strings.Contains(text, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *ThanksHandler) Handle(ctx *handler.Context) error {
+	return ctx.Reply("不客气！")
+}
+
+func (h *ThanksHandler) Priority() int { return 200 }
+func (h *ThanksHandler) ContinueChain() bool { return true }
+```
+
+### 添加正则处理器
+
+```go
+// internal/handlers/pattern/url.go
+package pattern
+
+type URLHandler struct {
+	pattern *regexp.Regexp
+}
+
+func NewURLHandler() *URLHandler {
+	return &URLHandler{
+		pattern: regexp.MustCompile(`https?://[^\s]+`),
+	}
+}
+
+func (h *URLHandler) Match(ctx *handler.Context) bool {
+	return h.pattern.MatchString(ctx.Text)
+}
+
+func (h *URLHandler) Handle(ctx *handler.Context) error {
+	urls := h.pattern.FindAllString(ctx.Text, -1)
+	return ctx.Reply(fmt.Sprintf("检测到 %d 个链接", len(urls)))
+}
+
+func (h *URLHandler) Priority() int { return 300 }
+func (h *URLHandler) ContinueChain() bool { return false }
 ```
 
 ## 🧪 测试
@@ -99,365 +280,101 @@ make test
 # 运行单元测试
 make test-unit
 
-# 运行集成测试
+# 运行集成测试（需要 MongoDB）
 make test-integration
 
 # 生成覆盖率报告
 make test-coverage
-
-# 查看覆盖率报告
-open coverage.html
 ```
 
-## 🎯 权限系统
+## 📊 监控指标
 
-### 权限等级
+Bot 在端口 9091 暴露 Prometheus 指标：
 
-1. **PermissionUser（普通用户）** - 可使用基础命令
-2. **PermissionAdmin（普通管理员）** - 可使用管理命令
-3. **PermissionSuperAdmin（超级管理员）** - 可配置命令开关、管理其他管理员
-4. **PermissionOwner（群主）** - 最高权限
+- `bot_messages_total`: 总消息数（按聊天类型）
+- `bot_handler_duration_seconds`: 处理器执行时间
+- `bot_handler_errors_total`: 处理器错误数
+- `bot_active_users`: 活跃用户数
 
-### 权限检查流程
+## 🔧 配置说明
 
-```go
-// 1. 命令定义所需权限
-func (h *BanHandler) RequiredPermission() user.Permission {
-    return user.PermissionAdmin
-}
+### 环境变量
 
-// 2. 中间件自动检查权限
-middleware := telegram.NewPermissionMiddleware(userRepo, groupRepo)
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `TELEGRAM_TOKEN` | Bot API Token | 必填 |
+| `MONGO_URI` | MongoDB 连接字符串 | `mongodb://localhost:27017` |
+| `DATABASE_NAME` | 数据库名称 | `telegram_bot` |
+| `LOG_LEVEL` | 日志级别 | `info` |
+| `LOG_FORMAT` | 日志格式 (json/text) | `json` |
 
-// 3. 权限不足自动拒绝
-// ❌ 权限不足！需要权限: Admin，当前权限: User
-```
+### 权限级别
 
-## 🔧 添加新命令
+| 级别 | 值 | 说明 |
+|------|----|----|
+| User | 1 | 普通用户（默认） |
+| Admin | 2 | 管理员 |
+| SuperAdmin | 3 | 超级管理员 |
+| Owner | 4 | 群主 |
 
-### 1. 创建命令模块
+### 处理器优先级
+
+| 范围 | 类型 | 说明 |
+|------|------|------|
+| 0-99 | 系统级 | 系统保留 |
+| 100-199 | 命令 | 以 / 开头的命令 |
+| 200-299 | 关键词 | 关键词匹配 |
+| 300-399 | 正则 | 正则表达式匹配 |
+| 400-499 | 交互 | 按钮、表单等 |
+| 900-999 | 监听器 | 日志、统计等 |
+
+## 🐳 Docker 部署
 
 ```bash
-mkdir -p internal/commands/mycommand
-cd internal/commands/mycommand
-```
+# 构建镜像
+docker build -t telegram-bot .
 
-### 2. 实现命令接口
-
-```go
-// handler.go
-package mycommand
-
-import (
-    "telegram-bot/internal/domain/command"
-    "telegram-bot/internal/domain/user"
-)
-
-type Handler struct {
-    // 注入依赖
-}
-
-func NewHandler(...) *Handler {
-    return &Handler{...}
-}
-
-// 命令名称
-func (h *Handler) Name() string {
-    return "mycommand"
-}
-
-// 命令描述
-func (h *Handler) Description() string {
-    return "我的新命令"
-}
-
-// 所需权限
-func (h *Handler) RequiredPermission() user.Permission {
-    return user.PermissionUser
-}
-
-// 检查是否启用
-func (h *Handler) IsEnabled(groupID int64) bool {
-    // 从数据库检查配置
-    return true
-}
-
-// 处理命令
-func (h *Handler) Handle(ctx *command.Context) error {
-    // 实现命令逻辑
-    return nil
-}
-```
-
-### 3. 注册命令
-
-```go
-// cmd/bot/main.go
-func registerCommands(...) {
-    // ... 其他命令
-    registry.Register(mycommand.NewHandler(...))
-}
-```
-
-### 4. 编写测试
-
-```go
-// handler_test.go
-package mycommand
-
-import "testing"
-
-func TestHandler_Name(t *testing.T) {
-    handler := NewHandler(...)
-    if handler.Name() != "mycommand" {
-        t.Errorf("expected mycommand, got %s", handler.Name())
-    }
-}
-```
-
-## 🎮 命令开关管理
-
-### 在群组中禁用命令
-
-```go
-// 管理员可以在群组中禁用特定命令
-/disable_command ping
-
-// 或在代码中操作
-group.DisableCommand("ping", adminUserID)
-groupRepo.Update(group)
-```
-
-### 在群组中启用命令
-
-```go
-// 重新启用命令
-/enable_command ping
-
-// 或在代码中操作
-group.EnableCommand("ping", adminUserID)
-groupRepo.Update(group)
-```
-
-## 📊 监控与告警
-
-### 访问监控面板
-
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3000（用户名/密码: admin/admin）
-
-### 关键指标
-
-- `bot_command_total` - 命令执行总数
-- `bot_command_duration_seconds` - 命令执行时间
-- `bot_command_errors_total` - 命令错误总数
-- `bot_active_users` - 活跃用户数
-- `mongodb_connections` - MongoDB 连接数
-
-### 告警规则
-
-- Bot 服务宕机 > 1 分钟
-- 命令错误率 > 10%
-- 响应时间 P95 > 2 秒
-- 内存使用 > 512MB
-- MongoDB 连接数 > 100
-
-## 🚀 部署
-
-### 使用 Docker Compose（推荐）
-
-```bash
-# 1. 在服务器上克隆代码
-git clone https://github.com/yourusername/telegram-bot.git
-cd telegram-bot
-
-# 2. 配置环境变量
-cp .env.example .env
-vim .env
-
-# 3. 启动服务
+# 使用 Docker Compose
 docker-compose -f deployments/docker/docker-compose.yml up -d
 
-# 4. 查看状态
-docker-compose ps
+# 查看日志
+docker-compose logs -f bot
 ```
 
-### 使用 GitHub Actions 自动部署
-
-1. **配置 GitHub Secrets**：
-   - `PROD_HOST` - 生产服务器 IP
-   - `PROD_USER` - SSH 用户名
-   - `PROD_SSH_KEY` - SSH 私钥
-   - `PROD_PORT` - SSH 端口
-   - `TELEGRAM_TOKEN` - Bot Token
-   - `SLACK_WEBHOOK`（可选）- Slack 通知
-
-2. **推送到 main 分支自动部署**：
-```bash
-git push origin main
-```
-
-3. **查看部署状态**：
-   访问 GitHub Actions 页面查看部署进度
-
-### 手动部署
+## 📝 Make 命令
 
 ```bash
-# 构建
-make build-linux
-
-# 上传到服务器
-scp bin/bot-linux user@server:/opt/telegram-bot/
-
-# SSH 到服务器
-ssh user@server
-
-# 启动服务
-cd /opt/telegram-bot
-./bot-linux
+make help           # 查看所有可用命令
+make build          # 编译
+make run            # 运行
+make test           # 测试
+make lint           # 代码检查
+make fmt            # 格式化代码
+make docker-up      # 启动 Docker 环境
+make docker-down    # 停止 Docker 环境
+make docker-logs    # 查看 Docker 日志
+make clean          # 清理构建产物
 ```
 
-## 🛠️ 开发工具
+## 🤝 贡献指南
 
-### Makefile 命令
-
-```bash
-make help              # 显示所有可用命令
-make build             # 构建应用
-make run               # 运行应用
-make test              # 运行测试
-make test-coverage     # 生成覆盖率报告
-make docker-up         # 启动 Docker 服务
-make docker-down       # 停止 Docker 服务
-make docker-logs       # 查看日志
-make lint              # 代码检查
-make fmt               # 格式化代码
-make mock              # 生成 Mock 文件
-make clean             # 清理构建文件
-make ci-check          # 运行 CI 检查
-```
-
-### 安装开发工具
-
-```bash
-make install-tools
-```
-
-包含：
-- `golangci-lint` - 代码检查
-- `goimports` - 导入排序
-- `mockgen` - Mock 生成
-- `air` - 热重载
-
-## 📁 项目结构详解
-
-```
-internal/
-├── domain/              # 领域层（业务核心）
-│   ├── user/           # 用户聚合根
-│   ├── group/          # 群组聚合根
-│   └── command/        # 命令接口
-│
-├── usecase/            # 用例层（业务逻辑）
-│   ├── user/          # 用户相关用例
-│   └── group/         # 群组相关用例
-│
-├── adapter/            # 适配器层（外部依赖）
-│   ├── repository/    # 数据持久化
-│   │   ├── mongodb/   # MongoDB 实现
-│   │   └── memory/    # 内存实现（测试）
-│   ├── telegram/      # Telegram API
-│   └── logger/        # 日志
-│
-├── commands/           # 命令模块（独立插件）
-│   ├── ping/
-│   ├── ban/
-│   ├── stats/
-│   └── welcome/
-│
-└── config/            # 配置管理
-```
-
-## 🧩 依赖注入示例
-
-```go
-// 初始化仓储
-userRepo := mongodb.NewUserRepository(db)
-groupRepo := mongodb.NewGroupRepository(db)
-
-// 初始化用例
-permCheck := user.NewCheckPermissionUseCase(userRepo)
-
-// 初始化命令（注入依赖）
-banHandler := ban.NewHandler(groupRepo, userRepo, telegramAPI)
-
-// 注册命令
-registry.Register(banHandler)
-```
-
-## 🔒 安全最佳实践
-
-1. **永远不要硬编码 Token**
-   - 使用环境变量
-   - 使用密钥管理服务（如 HashiCorp Vault）
-
-2. **权限检查**
-   - 每个命令都通过中间件检查权限
-   - 数据库中存储用户权限
-
-3. **输入验证**
-   - 验证所有用户输入
-   - 防止注入攻击
-
-4. **限流**
-   - 实现速率限制防止滥用
-   - 按用户 ID 限流
-
-5. **日志审计**
-   - 记录所有管理操作
-   - 敏感信息脱敏
-
-## 📝 贡献指南
-
-1. Fork 项目
-2. 创建特性分支（`git checkout -b feature/AmazingFeature`）
-3. 提交更改（`git commit -m 'Add some AmazingFeature'`）
-4. 推送到分支（`git push origin feature/AmazingFeature`）
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 Pull Request
-
-### 代码规范
-
-- 遵循 Go 官方风格指南
-- 使用 `golangci-lint` 检查代码
-- 测试覆盖率 > 80%
-- 所有公共函数必须有注释
-
-## 🐛 常见问题
-
-### Q: Bot 无法接收消息？
-A: 检查 Bot Token 是否正确，确保 Bot 已添加到群组
-
-### Q: MongoDB 连接失败？
-A: 检查 MongoDB 服务是否运行，URI 配置是否正确
-
-### Q: 权限检查失败？
-A: 确保用户在数据库中有记录，检查群组 ID 是否正确
-
-### Q: Docker 部署失败？
-A: 检查端口是否被占用，查看 `docker-compose logs`
 
 ## 📄 许可证
 
-MIT License
-
-## 🤝 联系方式
-
-- 项目地址: [https://github.com/yourusername/telegram-bot](https://github.com/yourusername/telegram-bot)
-- 问题反馈: [Issues](https://github.com/yourusername/telegram-bot/issues)
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
 
 ## 🙏 致谢
 
-- [go-telegram/bot](https://github.com/go-telegram/bot) - Telegram Bot API 库
-- [MongoDB Go Driver](https://github.com/mongodb/mongo-go-driver) - MongoDB 驱动
+- [go-telegram/bot](https://github.com/go-telegram/bot) - Telegram Bot API 客户端
+- [MongoDB](https://www.mongodb.com/) - 数据库
 - [Prometheus](https://prometheus.io/) - 监控系统
 - [Grafana](https://grafana.com/) - 可视化平台
+
+## 📧 联系方式
+
+有问题或建议？欢迎 [提交 Issue](../../issues)
