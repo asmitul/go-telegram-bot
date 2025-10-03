@@ -48,13 +48,6 @@ func (im *IndexManager) ensureUserIndexes(ctx context.Context) error {
 
 	indexes := []mongo.IndexModel{
 		{
-			// 主键索引（_id 自动创建）
-			Keys: bson.D{{Key: "_id", Value: 1}},
-			Options: options.Index().
-				SetName("idx_user_id").
-				SetUnique(true),
-		},
-		{
 			// 用户名索引（用于快速查找用户）
 			Keys: bson.D{{Key: "username", Value: 1}},
 			Options: options.Index().
@@ -86,13 +79,6 @@ func (im *IndexManager) ensureGroupIndexes(ctx context.Context) error {
 	collection := im.db.Collection("groups")
 
 	indexes := []mongo.IndexModel{
-		{
-			// 主键索引（_id 自动创建）
-			Keys: bson.D{{Key: "_id", Value: 1}},
-			Options: options.Index().
-				SetName("idx_group_id").
-				SetUnique(true),
-		},
 		{
 			// 群组名称索引
 			Keys: bson.D{{Key: "title", Value: 1}},
