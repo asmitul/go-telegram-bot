@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -15,22 +16,31 @@ import (
 
 // MockLogger 用于测试的简单 logger
 type MockLogger struct {
+	mu   sync.Mutex
 	logs []string
 }
 
 func (m *MockLogger) Debug(msg string, args ...interface{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.logs = append(m.logs, msg)
 }
 
 func (m *MockLogger) Info(msg string, args ...interface{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.logs = append(m.logs, msg)
 }
 
 func (m *MockLogger) Warn(msg string, args ...interface{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.logs = append(m.logs, msg)
 }
 
 func (m *MockLogger) Error(msg string, args ...interface{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.logs = append(m.logs, msg)
 }
 
