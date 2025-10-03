@@ -112,35 +112,6 @@ jobs:
           port: ${{ secrets.PROD_PORT }}
           envs: IMAGE_TAG,TELEGRAM_TOKEN,MONGO_URI,BOT_OWNER_IDS,GITHUB_ACTOR,GITHUB_TOKEN
           script: |
-            # Create deployment directory
-            mkdir -p ~/telegram-bot
-            cd ~/telegram-bot
-
-            # Create .env file from secrets
-            cat > .env << EOF
-            # Telegram Bot Configuration
-            TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-            DEBUG=false
-
-            # MongoDB Configuration
-            MONGO_URI=${MONGO_URI}
-            DATABASE_NAME=telegram_bot
-            MONGO_TIMEOUT=10s
-
-            # Application Configuration
-            ENVIRONMENT=production
-            LOG_LEVEL=info
-            LOG_FORMAT=json
-            PORT=8080
-
-            # Bot Owner
-            BOT_OWNER_IDS=${BOT_OWNER_IDS}
-
-            # Rate Limiting
-            RATE_LIMIT_ENABLED=true
-            RATE_LIMIT_PER_MIN=20
-            EOF
-
             # Login to GitHub Container Registry
             echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
@@ -151,11 +122,21 @@ jobs:
             docker stop telegram-bot 2>/dev/null || true
             docker rm telegram-bot 2>/dev/null || true
 
-            # Start new container with docker run
+            # Start new container with docker run (pass env vars directly)
             docker run -d \
               --name telegram-bot \
               --restart unless-stopped \
-              --env-file ~/telegram-bot/.env \
+              -e TELEGRAM_TOKEN="${TELEGRAM_TOKEN}" \
+              -e MONGO_URI="${MONGO_URI}" \
+              -e DATABASE_NAME="telegram_bot" \
+              -e MONGO_TIMEOUT="10s" \
+              -e ENVIRONMENT="production" \
+              -e LOG_LEVEL="info" \
+              -e LOG_FORMAT="json" \
+              -e BOT_OWNER_IDS="${BOT_OWNER_IDS}" \
+              -e DEBUG="false" \
+              -e RATE_LIMIT_ENABLED="true" \
+              -e RATE_LIMIT_PER_MIN="20" \
               --log-driver json-file \
               --log-opt max-size=10m \
               --log-opt max-file=3 \
