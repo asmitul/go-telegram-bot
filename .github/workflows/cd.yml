@@ -100,14 +100,72 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         env:
           IMAGE_TAG: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          BOT_OWNER_IDS: ${{ secrets.BOT_OWNER_IDS }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_PORT }}
-          envs: IMAGE_TAG
+          envs: IMAGE_TAG,TELEGRAM_TOKEN,MONGO_URI,BOT_OWNER_IDS,GITHUB_ACTOR,GITHUB_TOKEN
           script: |
+            # Create deployment directory
+            mkdir -p /opt/telegram-bot
             cd /opt/telegram-bot
+
+            # Create .env file from secrets
+            cat > .env << EOF
+            # Telegram Bot Configuration
+            TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+            DEBUG=false
+
+            # MongoDB Configuration
+            MONGO_URI=${MONGO_URI}
+            DATABASE_NAME=telegram_bot
+            MONGO_TIMEOUT=10s
+
+            # Application Configuration
+            ENVIRONMENT=production
+            LOG_LEVEL=info
+            LOG_FORMAT=json
+            PORT=8080
+
+            # Bot Owner
+            BOT_OWNER_IDS=${BOT_OWNER_IDS}
+
+            # Rate Limiting
+            RATE_LIMIT_ENABLED=true
+            RATE_LIMIT_PER_MIN=20
+            EOF
+
+            # Create docker-compose.yml for production
+            cat > docker-compose.yml << 'EOF'
+            version: '3.8'
+
+            services:
+              bot:
+                image: ${IMAGE_TAG}
+                container_name: telegram-bot
+                restart: unless-stopped
+                env_file: .env
+                logging:
+                  driver: "json-file"
+                  options:
+                    max-size: "10m"
+                    max-file: "3"
+                healthcheck:
+                  test: ["CMD", "pgrep", "-f", "bot"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                  start_period: 40s
+            EOF
+
+            # Login to GitHub Container Registry
+            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
             # Pull latest image
             docker pull ${IMAGE_TAG}
@@ -116,7 +174,7 @@ jobs:
             docker-compose down
 
             # Start new container
-            docker-compose up -d
+            IMAGE_TAG=${IMAGE_TAG} docker-compose up -d
 
             # Wait for health check
             sleep 10
