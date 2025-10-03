@@ -98,29 +98,32 @@ jobs:
 
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          IMAGE_TAG: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_PORT }}
+          envs: IMAGE_TAG
           script: |
             cd /opt/telegram-bot
-            
+
             # Pull latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-            
+            docker pull ${IMAGE_TAG}
+
             # Stop and remove old container
             docker-compose down
-            
+
             # Start new container
             docker-compose up -d
-            
+
             # Wait for health check
             sleep 10
-            
+
             # Check if container is running
             docker ps | grep telegram-bot
-            
+
             # Show logs
             docker-compose logs --tail=50 bot
 
@@ -142,22 +145,6 @@ jobs:
               exit 1
             fi
 
-      - name: Notify on success
-        if: success()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: success
-          text: '✅ Bot deployed successfully to production'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-
-      - name: Notify on failure
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          text: '❌ Bot deployment failed'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-
   rollback:
     name: Rollback on Failure
     needs: deploy
@@ -166,13 +153,16 @@ jobs:
     steps:
       - name: Rollback to previous version
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          IMAGE_TAG: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:previous
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_PORT }}
+          envs: IMAGE_TAG
           script: |
             cd /opt/telegram-bot
             docker-compose down
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:previous
+            docker pull ${IMAGE_TAG}
             docker-compose up -d
