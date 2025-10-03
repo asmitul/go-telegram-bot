@@ -758,7 +758,7 @@ Bot:
 ## 📚 相关文档
 
 - 文档示例：`docs/handlers/command-handler-guide.md:945-989` 有 `/enable` 完整代码
-- API 参考：`docs/api-reference.md:1040-1060` 记录了 EnableCommand/DisableCommand API
+- API 参考：`docs/developer-api.md:1040-1060` 记录了 EnableCommand/DisableCommand API
 - 仓储指南：`docs/repository-guide.md:297-306` 有配置方法说明
 
 ---
@@ -775,6 +775,6 @@ Bot:
 ---
 
 **创建日期**: 2025-10-02
-**最后更新**: 2025-10-02
+**最后更新**: 2025-10-03
 **负责人**: 待分配
 **状态**: 待实现

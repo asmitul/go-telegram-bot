@@ -1,4 +1,4 @@
-# API 参考文档
+# 开发者 API 参考文档
 
 ## 📚 目录
 
@@ -16,7 +16,7 @@
 
 ## 概述
 
-本文档提供 Telegram Bot 框架的完整 API 参考，包括核心接口、方法签名、参数说明和返回值。
+本文档提供 Telegram Bot 框架的完整 API 参考，包括核心接口、方法签名、参数说明和返回值。这是面向开发者的技术文档。
 
 ### 导入路径
 
@@ -33,7 +33,7 @@ import (
 
 - **Go 版本**: 1.21+
 - **框架版本**: v1.0
-- **最后更新**: 2025-10-02
+- **最后更新**: 2025-10-03
 
 ---
 
@@ -1515,11 +1515,11 @@ func TestMyHandler(t *testing.T) {
 - [命令处理器开发指南](./handlers/command-handler-guide.md)
 - [中间件开发指南](./middleware-guide.md)
 - [Repository 开发指南](./repository-guide.md)
-- [部署运维指南](./deployment-guide.md)
+- [部署运维指南](./deployment.md)
 - [架构总览](../CLAUDE.md)
 
 ---
 
-**编写日期**: 2025-10-02
+**最后更新**: 2025-10-03
 **文档版本**: v1.0
 **维护者**: Telegram Bot Development Team

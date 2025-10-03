@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a production-grade Telegram Bot built with Go 1.21+, featuring a **unified message handling architecture** that supports commands, keyword triggers, pattern matching, and message listeners. The bot works in all chat types (private, group, supergroup, channel) with a flexible handler-based system.
+This is a production-grade Telegram Bot built with Go 1.25, featuring a **unified message handling architecture** that supports commands, keyword triggers, pattern matching, and message listeners. The bot works in all chat types (private, group, supergroup, channel) with a flexible handler-based system.
 
 ## Architecture
 
@@ -413,9 +413,10 @@ Commands automatically check this via `BaseCommand.Match()`.
 
 Environment variables (`.env` file):
 - `TELEGRAM_TOKEN`: Bot API token (required)
-- `MONGO_URI`: MongoDB connection string
+- `MONGO_URI`: MongoDB Atlas connection string (required)
 - `DATABASE_NAME`: MongoDB database name
 - `LOG_LEVEL`: Logging level (debug, info, warn, error)
+- `BOT_OWNER_IDS`: Comma-separated list of owner user IDs (optional)
 
 ## Priority Guidelines
 
@@ -442,10 +443,10 @@ import (
 ## Key Dependencies
 
 - `github.com/go-telegram/bot`: Telegram Bot API client
-- `go.mongodb.org/mongo-driver`: MongoDB driver
-- `github.com/sirupsen/logrus`: Structured logging
+- `go.mongodb.org/mongo-driver`: MongoDB driver (with Atlas support)
 - `github.com/joho/godotenv`: Environment variable loading
 - `github.com/stretchr/testify`: Testing utilities
+- `go.uber.org/mock`: Mock generation for testing
 
 ## Testing Strategy
 

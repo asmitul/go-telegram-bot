@@ -40,7 +40,7 @@
 
 | 软件 | 版本要求 | 用途 | 安装验证 |
 |------|---------|------|---------|
-| **Go** | 1.21+ | 编译运行 | `go version` |
+| **Go** | 1.25+ | 编译运行 | `go version` |
 | **MongoDB Atlas** | 免费套餐 | 云数据库 | 注册: https://www.mongodb.com/cloud/atlas |
 | **Git** | 任意 | 版本控制 | `git --version` |
 
@@ -65,7 +65,7 @@ sudo apt update
 sudo apt install golang-go
 
 # 验证安装
-go version  # 应该显示 go1.21 或更高版本
+go version  # 应该显示 go1.25 或更高版本
 ```
 
 **Windows:**
@@ -793,6 +793,9 @@ db.groups.find().pretty()
 - [CLAUDE.md](../CLAUDE.md) - 项目架构总览
 - [README.md](../README.md) - 项目说明
 - [处理器开发指南](./handlers/) - 详细的开发文档
+- [部署指南](./deployment.md) - 生产环境部署
+- [命令参考](./commands-reference.md) - Bot 命令文档
+- [架构设计](./architecture.md) - 系统架构详解
 
 ### 🤝 获取帮助
 

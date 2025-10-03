@@ -1,8 +1,8 @@
-# Telegram Bot API 文档
+# Telegram Bot 命令参考
 
 ## 概述
 
-本文档描述了 Telegram Bot 的所有可用命令、参数格式、权限要求和错误处理。
+本文档描述了 Telegram Bot 的所有可用命令、参数格式、权限要求和错误处理。这是面向 Bot 使用者的命令手册。
 
 ## 目录
 

@@ -713,5 +713,15 @@ result := limiter.Allow(ctx, userID, rate.Limit{
 
 ---
 
-**最后更新**: 2025-10-01
+## 相关文档
+
+- [架构总览](../CLAUDE.md)
+- [中间件开发指南](./middleware-guide.md)
+- [定时任务开发指南](./scheduler-guide.md)
+- [Repository 模式指南](./repository-guide.md)
+- [快速入门](./getting-started.md)
+
+---
+
+**最后更新**: 2025-10-03
 **版本**: 1.0

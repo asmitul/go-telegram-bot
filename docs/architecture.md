@@ -125,7 +125,8 @@ telegram-bot/
 │   ├── mocks/                 # Mock 对象
 │   └── integration/           # 集成测试
 └── docs/                       # 文档
-    ├── api.md                 # API 文档
+    ├── commands-reference.md  # 命令参考文档
+    ├── developer-api.md       # 开发者 API 文档
     └── architecture.md        # 架构文档
 ```
 
@@ -583,17 +584,17 @@ Telegram    Bot      Handler    GroupRepo   Cache
 
 | 组件 | 技术 | 版本 | 用途 |
 |-----|------|-----|------|
-| 语言 | Go | 1.21+ | 主要开发语言 |
+| 语言 | Go | 1.25 | 主要开发语言 |
 | Bot SDK | go-telegram/bot | latest | Telegram Bot API |
-| 数据库 | MongoDB | 4.4+ | 数据持久化 |
-| 缓存 | Redis | 6.0+ | 数据缓存 |
+| 数据库 | MongoDB Atlas | 云数据库 | 数据持久化 |
+| 缓存 | Redis | 6.0+ (可选) | 数据缓存 |
 
 ### 基础设施
 
 | 组件 | 技术 | 用途 |
 |-----|------|-----|
 | 日志 | 结构化日志 | 日志记录 |
-| 测试 | testify, gomock | 单元测试 |
+| 测试 | testify, go.uber.org/mock | 单元测试 |
 
 ### 第三方库
 
@@ -952,5 +953,5 @@ type MyEntityRepository struct {
 ---
 
 **文档版本**: v1.0.0
-**最后更新**: 2025-10-01
+**最后更新**: 2025-10-03
 **维护者**: Development Team

@@ -233,7 +233,7 @@ db.forward_configs.createIndex({ enabled: 1, source_channel_id: 1 })
 需要更新的文档:
 - [ ] `docs/handlers/listener-handler-guide.md` - 添加 ChannelForwarder 示例
 - [ ] `docs/getting-started.md` - 添加转发功能使用说明
-- [ ] `docs/api-reference.md` - 添加 `ForwardMessage()` API 文档
+- [ ] `docs/developer-api.md` - 添加 `ForwardMessage()` API 文档
 - [ ] `README.md` - 功能列表中添加"频道消息转发"
 
 ---
@@ -297,7 +297,7 @@ Bot 自动检测到消息
 ---
 
 **创建日期**: 2025-10-02
-**最后更新**: 2025-10-02
+**最后更新**: 2025-10-03
 **负责人**: 待分配
 
 ---

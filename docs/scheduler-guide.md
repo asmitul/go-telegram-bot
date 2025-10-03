@@ -1173,7 +1173,7 @@ if os.Getenv("ENABLE_MY_JOB") == "true" {
 
 ### 相关文档
 
-- [架构总览](./CLAUDE.md)
+- [架构总览](../CLAUDE.md)
 - [命令处理器开发指南](./handlers/command-handler-guide.md)
 - [监听器开发指南](./handlers/listener-handler-guide.md)
 
@@ -1185,6 +1185,6 @@ if os.Getenv("ENABLE_MY_JOB") == "true" {
 
 ---
 
-**编写日期**: 2025-10-02
+**最后更新**: 2025-10-03
 **文档版本**: v1.0
 **维护者**: Telegram Bot Development Team

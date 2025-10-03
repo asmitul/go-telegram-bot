@@ -1173,6 +1173,6 @@ func (h *Handler) Handle(ctx *handler.Context) error {
 
 ---
 
-**编写日期**: 2025-10-02
+**最后更新**: 2025-10-03
 **文档版本**: v1.0
 **维护者**: Telegram Bot Development Team
