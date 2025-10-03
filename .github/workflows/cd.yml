@@ -126,6 +126,7 @@ jobs:
             docker run -d \
               --name telegram-bot \
               --restart unless-stopped \
+              --network bridge \
               -e TELEGRAM_TOKEN="${TELEGRAM_TOKEN}" \
               -e MONGO_URI="${MONGO_URI}" \
               -e DATABASE_NAME="telegram_bot" \
