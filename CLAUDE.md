@@ -21,7 +21,7 @@ The foundation of the message handling system:
 - **Context** (`context.go`): Enhanced message context
   - Contains all message information (text, user, chat, etc.)
   - Provides helper methods: `IsPrivate()`, `IsGroup()`, `IsChannel()`
-  - Built-in reply methods: `Reply()`, `ReplyMarkdown()`, `Send()`
+  - Built-in reply methods: `Reply()`, `ReplyHTML()`, `Send()`
   - Permission checking: `HasPermission()`, `RequirePermission()`
   - Context storage for inter-handler data sharing
 
@@ -151,6 +151,49 @@ make docker-up      # Start all services (bot, MongoDB)
 make docker-down    # Stop all services
 make docker-logs    # Follow bot logs
 make docker-clean   # Remove all containers and volumes
+```
+
+## Message Formatting Guidelines
+
+**IMPORTANT: Always use HTML format for bot responses, NOT Markdown**
+
+### Why HTML?
+- More stable and predictable
+- No need to escape special characters like `-`, `:`, `.`, `(`, `)`, etc.
+- Only need to escape `<`, `>`, `&` (which are rare in Chinese text)
+- Markdown has complex escaping rules that often break
+
+### HTML Tags to Use
+- `<b>text</b>` - Bold text
+- `<code>text</code>` - Inline code
+- `<pre>code</pre>` - Code block
+- `<i>text</i>` - Italic text
+- `<a href="url">text</a>` - Hyperlink
+
+### Usage in Handlers
+```go
+// ✅ CORRECT - Use HTML
+return ctx.ReplyHTML("<b>Title</b>\nValue: 123")
+
+// ✅ CORRECT - Plain text
+return ctx.Reply("Simple message without formatting")
+
+// ❌ WRONG - Don't use Markdown
+return ctx.ReplyMarkdown("*Title*\nValue: 123")
+```
+
+### When Adding New Commands
+- Always use `ctx.ReplyHTML()` for formatted responses
+- Use `ctx.Reply()` only for plain text without formatting
+- Never use `ctx.ReplyMarkdown()` (kept for backward compatibility only)
+
+### Escaping in HTML
+Only escape these characters when they appear in user-generated content:
+```go
+import "html"
+
+text := html.EscapeString(userInput)  // Escapes <, >, & automatically
+return ctx.ReplyHTML(fmt.Sprintf("<b>User said:</b> %s", text))
 ```
 
 ## Adding New Handlers

@@ -43,7 +43,7 @@ func (h *StatsHandler) Handle(ctx *handler.Context) error {
 
 	// 构建统计信息
 	response := fmt.Sprintf(
-		"📊 *群组统计*\n\n"+
+		"📊 <b>群组统计</b>\n\n"+
 			"🏷️ 群组名称: %s\n"+
 			"🆔 群组 ID: %d\n"+
 			"📅 创建时间: %s\n",
@@ -52,5 +52,5 @@ func (h *StatsHandler) Handle(ctx *handler.Context) error {
 		g.CreatedAt.Format("2006-01-02 15:04:05"),
 	)
 
-	return ctx.ReplyMarkdown(response)
+	return ctx.ReplyHTML(response)
 }

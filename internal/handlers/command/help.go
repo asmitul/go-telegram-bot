@@ -44,7 +44,7 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("📖 *可用命令列表*\n\n")
+	sb.WriteString("📖 <b>可用命令列表</b>\n\n")
 
 	// 获取所有命令信息
 	commands := h.getCommands()
@@ -71,7 +71,7 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
 
 	// 输出各级别命令
 	if len(userCommands) > 0 {
-		sb.WriteString("✅ *基础命令*\n")
+		sb.WriteString("✅ <b>基础命令</b>\n")
 		for _, cmd := range userCommands {
 			sb.WriteString(cmd)
 		}
@@ -79,7 +79,7 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
 	}
 
 	if len(adminCommands) > 0 {
-		sb.WriteString("🔧 *管理员命令*\n")
+		sb.WriteString("🔧 <b>管理员命令</b>\n")
 		for _, cmd := range adminCommands {
 			sb.WriteString(cmd)
 		}
@@ -87,7 +87,7 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
 	}
 
 	if len(superAdminCommands) > 0 {
-		sb.WriteString("⭐ *超级管理员命令*\n")
+		sb.WriteString("⭐ <b>超级管理员命令</b>\n")
 		for _, cmd := range superAdminCommands {
 			sb.WriteString(cmd)
 		}
@@ -95,16 +95,16 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
 	}
 
 	if len(ownerCommands) > 0 {
-		sb.WriteString("👑 *群主命令*\n")
+		sb.WriteString("👑 <b>群主命令</b>\n")
 		for _, cmd := range ownerCommands {
 			sb.WriteString(cmd)
 		}
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString("💡 提示：使用 `/命令名` 执行命令")
+	sb.WriteString("💡 提示：使用 <code>/命令名</code> 执行命令")
 
-	return ctx.ReplyMarkdown(sb.String())
+	return ctx.ReplyHTML(sb.String())
 }
 
 // CommandData 命令数据
@@ -141,7 +141,7 @@ func (h *HelpHandler) getCommands() []CommandData {
 
 func (h *HelpHandler) formatCommand(name, desc string, perm user.Permission) string {
 	permIcon := h.getPermissionIcon(perm)
-	return fmt.Sprintf("%s `/%s` - %s\n", permIcon, name, desc)
+	return fmt.Sprintf("%s <code>/%s</code> - %s\n", permIcon, name, desc)
 }
 
 func (h *HelpHandler) getPermissionIcon(perm user.Permission) string {
