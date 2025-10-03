@@ -143,14 +143,10 @@ cat > /opt/telegram-bot/.env << 'EOF'
 TELEGRAM_TOKEN=your_production_bot_token
 DEBUG=false
 
-# MongoDB Configuration
-MONGO_URI=mongodb://mongodb:27017
+# MongoDB Configuration (MongoDB Atlas)
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/
 DATABASE_NAME=telegram_bot
 MONGO_TIMEOUT=10s
-
-# MongoDB Root Credentials
-MONGO_ROOT_USER=admin
-MONGO_ROOT_PASSWORD=your_secure_password
 
 # Application Configuration
 ENVIRONMENT=production
@@ -174,45 +170,11 @@ services:
     container_name: telegram-bot
     restart: unless-stopped
     env_file: .env
-    environment:
-      - MONGO_URI=mongodb://mongodb:27017
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    networks:
-      - bot-network
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-
-  mongodb:
-    image: mongo:7.0
-    container_name: mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-    volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-    networks:
-      - bot-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
-
-networks:
-  bot-network:
-    driver: bridge
-
-volumes:
-  mongodb_data:
-  mongodb_config:
 EOF
 ```
 
@@ -244,7 +206,7 @@ EOF
 | `PROD_PORT` | SSH 端口 | `22` |
 | `PROD_SSH_KEY` | SSH 私钥（完整内容） | `-----BEGIN OPENSSH PRIVATE KEY-----\n...` |
 | `TELEGRAM_TOKEN` | Telegram Bot Token | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
-| `MONGO_ROOT_PASSWORD` | MongoDB root 密码 | `your_secure_password` |
+| `MONGO_URI` | MongoDB Atlas 连接字符串 | `mongodb+srv://user:pass@cluster.mongodb.net/` |
 
 ### 3.3 配置 GHCR 访问权限
 
@@ -277,10 +239,8 @@ docker-compose up -d
 | 变量名 | 说明 | 默认值 | 必需 |
 |--------|------|--------|------|
 | `TELEGRAM_TOKEN` | Telegram Bot API Token | - | ✅ |
-| `MONGO_URI` | MongoDB 连接字符串 | `mongodb://localhost:27017` | ✅ |
+| `MONGO_URI` | MongoDB Atlas 连接字符串 | - | ✅ |
 | `DATABASE_NAME` | 数据库名称 | `telegram_bot` | ✅ |
-| `MONGO_ROOT_USER` | MongoDB root 用户名 | `admin` | ✅ |
-| `MONGO_ROOT_PASSWORD` | MongoDB root 密码 | - | ✅ |
 
 ### 4.2 可选的环境变量
 
@@ -366,21 +326,26 @@ docker-compose logs bot
 
 **常见问题**:
 - ❌ `Invalid token`: 检查 `TELEGRAM_TOKEN` 是否正确
-- ❌ `Cannot connect to MongoDB`: 检查 MongoDB 服务是否启动
+- ❌ `Cannot connect to MongoDB`: 检查 `MONGO_URI` 和 Atlas IP 白名单
 - ❌ `Permission denied`: 检查文件权限
 
 ### 6.2 MongoDB 连接失败
 
-```bash
-# 检查 MongoDB 状态
-docker-compose ps mongodb
+**排查步骤**：
 
-# 查看 MongoDB 日志
-docker-compose logs mongodb
+1. **检查连接字符串**
+   ```bash
+   echo $MONGO_URI
+   ```
 
-# 测试连接
-docker exec -it mongodb mongosh -u admin -p your_password
-```
+2. **检查 Atlas IP 白名单**
+   - 登录 https://cloud.mongodb.com/
+   - Network Access → 添加服务器 IP
+
+3. **测试连接**
+   ```bash
+   mongosh "mongodb+srv://user:pass@cluster.mongodb.net/telegram_bot"
+   ```
 
 ### 6.3 GitHub Actions 部署失败
 
@@ -402,10 +367,9 @@ docker stats
 # 查看 Bot 内存使用
 docker exec telegram-bot ps aux
 
-# 查看 MongoDB 慢查询
-docker exec -it mongodb mongosh
-> db.setProfilingLevel(2)
-> db.system.profile.find().sort({ts:-1}).limit(10)
+# 查看 MongoDB 慢查询（使用 Atlas Performance Advisor）
+# 或使用 mongosh:
+mongosh "mongodb+srv://user:pass@cluster.mongodb.net/telegram_bot" --eval "db.setProfilingLevel(2); db.system.profile.find().sort({ts:-1}).limit(10)"
 ```
 
 ---
@@ -448,15 +412,16 @@ docker exec -it mongodb mongosh
    - 使用非 root 用户运行容器
    - 限制容器资源使用
 
-4. **MongoDB 安全**:
-   - 启用认证
+4. **MongoDB Atlas 安全**:
    - 使用强密码
-   - 不要暴露 MongoDB 端口到公网
+   - 配置 IP 白名单
+   - 启用数据库审计日志（付费功能）
 
 ### C. 性能优化建议
 
-1. **MongoDB**:
-   - 创建适当的索引
+1. **MongoDB Atlas**:
+   - 创建适当的索引（使用 Performance Advisor）
+   - 升级到更高层级集群（M10+）
    - 配置连接池大小
    - 启用复制集（高可用）
 

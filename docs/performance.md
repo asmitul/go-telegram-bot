@@ -541,7 +541,7 @@ go tool pprof http://localhost:6060/debug/pprof/goroutine
 
 - CPU: Intel i7-9750H (6 核 12 线程)
 - RAM: 16GB DDR4
-- MongoDB: 4.4 (本地)
+- MongoDB: Atlas M0 (云)
 - Redis: 7.0 (本地)
 
 ### 数据库查询性能

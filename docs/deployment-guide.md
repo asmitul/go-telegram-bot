@@ -91,9 +91,9 @@ nano .env
 # Telegram Bot
 TELEGRAM_TOKEN=<你的_bot_token>
 
-# MongoDB
-MONGO_ROOT_USER=admin
-MONGO_ROOT_PASSWORD=<强密码>
+# MongoDB Atlas
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/
+DATABASE_NAME=telegram_bot
 
 # 日志
 LOG_LEVEL=info
@@ -119,8 +119,8 @@ docker-compose logs -f bot
 # 检查 Bot 容器
 docker logs telegram-bot
 
-# 检查 MongoDB
-docker exec -it telegram-bot-mongo mongosh
+# 检查 MongoDB Atlas 连接
+# 使用 Atlas Web UI: https://cloud.mongodb.com/
 ```
 
 ### 4. 服务管理
@@ -160,51 +160,9 @@ kubectl create secret generic bot-secrets \
   -n telegram-bot
 ```
 
-### 3. 部署 MongoDB
+**注意**: 推荐使用 MongoDB Atlas 云数据库，无需在 Kubernetes 中部署 MongoDB。
 
-```yaml
-# deployments/k8s/mongodb.yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: mongodb
-  namespace: telegram-bot
-spec:
-  serviceName: mongodb
-  replicas: 1
-  selector:
-    matchLabels:
-      app: mongodb
-  template:
-    metadata:
-      labels:
-        app: mongodb
-    spec:
-      containers:
-      - name: mongodb
-        image: mongo:7.0
-        ports:
-        - containerPort: 27017
-        env:
-        - name: MONGO_INITDB_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: bot-secrets
-              key: mongo-password
-        volumeMounts:
-        - name: data
-          mountPath: /data/db
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi
-```
-
-### 4. 部署 Bot
+### 3. 部署 Bot
 
 ```bash
 kubectl apply -f deployments/k8s/deployment.yaml
@@ -280,7 +238,7 @@ sudo systemctl restart telegram-bot
 | 变量 | 必需 | 默认值 | 说明 |
 |------|-----|--------|------|
 | `TELEGRAM_TOKEN` | ✅ | 无 | Bot API Token |
-| `MONGO_URI` | ✅ | `mongodb://localhost:27017` | MongoDB 连接串 |
+| `MONGO_URI` | ✅ | 无 | MongoDB 连接串 (Atlas) |
 | `DATABASE_NAME` | ❌ | `telegram_bot` | 数据库名称 |
 
 ### 日志配置
@@ -357,54 +315,29 @@ logging:
 
 ### MongoDB 备份
 
-**手动备份**：
+**MongoDB Atlas 自动备份**：
+
+Atlas 提供自动备份功能（M10+ 集群）：
+
+1. 登录 [MongoDB Atlas](https://cloud.mongodb.com/)
+2. 选择你的集群
+3. 进入 "Backup" 标签
+4. 配置备份策略（快照频率、保留时间）
+
+**免费 M0 集群**：
+- 不支持自动备份
+- 建议使用 mongodump 手动导出：
+
 ```bash
-# Docker 环境
-docker exec telegram-bot-mongo mongodump \
-  --out=/backup/$(date +%Y%m%d) \
-  --authenticationDatabase=admin
-
-# 导出备份
-docker cp telegram-bot-mongo:/backup ./backup
-```
-
-**自动备份脚本**：
-```bash
-#!/bin/bash
-# scripts/backup.sh
-
-BACKUP_DIR="/backup/mongodb"
-DATE=$(date +%Y%m%d_%H%M%S)
-
-# 创建备份
-docker exec telegram-bot-mongo mongodump \
-  --out=/backup/${DATE} \
-  --authenticationDatabase=admin
-
-# 压缩
-tar -czf ${BACKUP_DIR}/backup_${DATE}.tar.gz ${BACKUP_DIR}/${DATE}
-
-# 清理 7 天前的备份
-find ${BACKUP_DIR} -name "backup_*.tar.gz" -mtime +7 -delete
-```
-
-**定时备份（Cron）**：
-```bash
-# 每天凌晨 3 点备份
-0 3 * * * /opt/telegram-bot/scripts/backup.sh
+# 使用 mongodump 导出（需要本地安装 MongoDB Tools）
+mongodump --uri="mongodb+srv://user:pass@cluster.mongodb.net/telegram_bot" --out=./backup
 ```
 
 ### 恢复数据
 
 ```bash
-# 解压备份
-tar -xzf backup_20251002.tar.gz
-
-# 恢复到 MongoDB
-docker exec -i telegram-bot-mongo mongorestore \
-  --drop \
-  /backup/20251002 \
-  --authenticationDatabase=admin
+# 使用 mongorestore 恢复
+mongorestore --uri="mongodb+srv://user:pass@cluster.mongodb.net/" --drop ./backup
 ```
 
 ---
@@ -422,8 +355,8 @@ docker logs telegram-bot
 # 2. 检查环境变量
 docker exec telegram-bot env | grep TELEGRAM
 
-# 3. 检查 MongoDB 连接
-docker exec telegram-bot ping -c 1 mongodb
+# 3. 检查 MongoDB Atlas 连接
+docker exec telegram-bot env | grep MONGO_URI
 
 # 4. 检查 Token 是否正确
 curl https://api.telegram.org/bot<TOKEN>/getMe
@@ -433,16 +366,27 @@ curl https://api.telegram.org/bot<TOKEN>/getMe
 
 **排查**：
 
-```bash
-# 检查 MongoDB 是否运行
-docker ps | grep mongodb
+1. **检查 MONGO_URI 配置**
+   ```bash
+   # 确认环境变量正确
+   docker exec telegram-bot env | grep MONGO_URI
+   ```
 
-# 检查 MongoDB 日志
-docker logs telegram-bot-mongo
+2. **检查 Atlas IP 白名单**
+   - 登录 Atlas → Network Access
+   - 确保服务器 IP 在白名单中
+   - 或添加 `0.0.0.0/0` 允许所有 IP（开发环境）
 
-# 测试连接
-docker exec -it telegram-bot-mongo mongosh
-```
+3. **测试连接**
+   ```bash
+   # 使用 mongosh 测试（需要本地安装）
+   mongosh "mongodb+srv://user:pass@cluster.mongodb.net/telegram_bot"
+   ```
+
+4. **检查 Bot 日志中的错误**
+   ```bash
+   docker logs telegram-bot | grep -i "mongo\|database"
+   ```
 
 ### 3. 消息无响应
 
@@ -452,10 +396,10 @@ docker exec -it telegram-bot-mongo mongosh
 # 查看处理器注册
 docker logs telegram-bot | grep "Handlers registered"
 
-# 查看权限
-docker exec -it telegram-bot-mongo mongosh
-> use telegram_bot
-> db.users.find({user_id: 123456789})
+# 查看权限（使用 Atlas Web UI 或 mongosh）
+# 1. Atlas Web UI: Collections → users → 搜索 user_id
+# 2. 或使用 mongosh:
+mongosh "mongodb+srv://user:pass@cluster.mongodb.net/telegram_bot" --eval "db.users.find({user_id: 123456789}).pretty()"
 
 # 测试命令
 /ping

@@ -42,7 +42,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		TelegramToken:    getEnv("TELEGRAM_TOKEN", ""),
 		Debug:            getEnvBool("DEBUG", false),
-		MongoURI:         getEnv("MONGO_URI", "mongodb://localhost:27017"),
+		MongoURI:         getEnv("MONGO_URI", ""),
 		DatabaseName:     getEnv("DATABASE_NAME", "telegram_bot"),
 		MongoTimeout:     getEnvDuration("MONGO_TIMEOUT", 10*time.Second),
 		Environment:      getEnv("ENVIRONMENT", "development"),

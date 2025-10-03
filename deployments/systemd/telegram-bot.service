@@ -1,7 +1,6 @@
 [Unit]
 Description=Telegram Bot Service
-After=network.target mongodb.service
-Wants=mongodb.service
+After=network.target
 
 [Service]
 Type=simple

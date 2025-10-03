@@ -134,7 +134,7 @@ cp .env.example .env
 
 # 编辑 .env 文件，填入你的配置
 # TELEGRAM_TOKEN=your_bot_token_here
-# MONGO_URI=mongodb://localhost:27017
+# MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/
 ```
 
 ### 3. 使用 Docker 运行（推荐）
@@ -292,7 +292,7 @@ make test-coverage
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `TELEGRAM_TOKEN` | Bot API Token | 必填 |
-| `MONGO_URI` | MongoDB 连接字符串 | `mongodb://localhost:27017` |
+| `MONGO_URI` | MongoDB 连接字符串 (支持 Atlas) | 必填 |
 | `DATABASE_NAME` | 数据库名称 | `telegram_bot` |
 | `LOG_LEVEL` | 日志级别 | `info` |
 | `LOG_FORMAT` | 日志格式 (json/text) | `json` |

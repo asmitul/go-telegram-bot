@@ -41,7 +41,7 @@
 | 软件 | 版本要求 | 用途 | 安装验证 |
 |------|---------|------|---------|
 | **Go** | 1.21+ | 编译运行 | `go version` |
-| **MongoDB** | 4.4+ | 数据存储 | `mongod --version` |
+| **MongoDB Atlas** | 免费套餐 | 云数据库 | 注册: https://www.mongodb.com/cloud/atlas |
 | **Git** | 任意 | 版本控制 | `git --version` |
 
 ### 推荐软件
@@ -72,30 +72,17 @@ go version  # 应该显示 go1.21 或更高版本
 1. 下载安装包：https://go.dev/dl/
 2. 安装后验证：`go version`
 
-### 安装 MongoDB（如果未安装）
+### 配置 MongoDB Atlas 云数据库
 
-**macOS:**
-```bash
-brew tap mongodb/brew
-brew install mongodb-community@7.0
-brew services start mongodb-community@7.0
-```
+**推荐使用 MongoDB Atlas**（提供免费 M0 套餐）：
 
-**Ubuntu/Debian:**
-```bash
-sudo apt install mongodb
-sudo systemctl start mongodb
-sudo systemctl enable mongodb
-```
+1. 访问 https://www.mongodb.com/cloud/atlas
+2. 注册并创建免费集群
+3. 创建数据库用户
+4. 配置网络访问（IP 白名单）
+5. 获取连接字符串（mongodb+srv://...）
 
-**Windows:**
-1. 下载安装包：https://www.mongodb.com/try/download/community
-2. 安装并启动服务
-
-**使用 Docker（推荐）:**
-```bash
-docker run -d -p 27017:27017 --name mongo mongo:7.0
-```
+**详细步骤**：参考 [MongoDB Atlas 快速入门](https://www.mongodb.com/docs/atlas/getting-started/)
 
 ---
 
@@ -122,7 +109,7 @@ nano .env  # 或使用你喜欢的编辑器
 ```bash
 # .env 文件
 TELEGRAM_TOKEN=<你的_bot_token>  # 从 @BotFather 获取
-MONGO_URI=mongodb://localhost:27017
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/  # MongoDB Atlas 连接字符串
 DATABASE_NAME=telegram_bot
 LOG_LEVEL=info
 LOG_FORMAT=json
@@ -740,11 +727,11 @@ go test -v ./internal/handlers/command/ -run TestVersionHandler
 ### 6. MongoDB 数据检查
 
 ```bash
-# 进入 MongoDB 容器
-docker exec -it <container_id> mongosh
+# 使用 mongosh 连接 Atlas（需要本地安装 MongoDB Tools）
+mongosh "mongodb+srv://user:pass@cluster.mongodb.net/telegram_bot"
 
 # 查看数据库
-use telegram_bot
+show collections
 
 # 查看用户
 db.users.find().pretty()
@@ -821,7 +808,7 @@ db.groups.find().pretty()
 ### Q1：机器人无法启动？
 
 **检查清单**：
-1. ✅ MongoDB 是否运行？`docker ps` 或 `systemctl status mongodb`
+1. ✅ MongoDB Atlas 连接是否正确？检查 `MONGO_URI` 和 IP 白名单
 2. ✅ `.env` 文件中的 `TELEGRAM_TOKEN` 是否正确？
 3. ✅ 网络是否可以访问 Telegram API？
 
@@ -875,7 +862,7 @@ make test
 | 变量名 | 必需 | 默认值 | 说明 |
 |--------|-----|--------|------|
 | `TELEGRAM_TOKEN` | ✅ | 无 | Bot API Token |
-| `MONGO_URI` | ✅ | `mongodb://localhost:27017` | MongoDB 连接串 |
+| `MONGO_URI` | ✅ | 无 | MongoDB 连接串 (支持 Atlas) |
 | `DATABASE_NAME` | ❌ | `telegram_bot` | 数据库名称 |
 | `LOG_LEVEL` | ❌ | `info` | 日志级别 (debug/info/warn/error) |
 | `LOG_FORMAT` | ❌ | `json` | 日志格式 (json/text) |

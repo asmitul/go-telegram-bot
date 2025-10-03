@@ -674,7 +674,7 @@ func TestMyService(t *testing.T) {
 
 func TestUserRepository_Integration(t *testing.T) {
     // 连接测试数据库
-    client, _ := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+    client, _ := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb+srv://user:pass@cluster.mongodb.net/"))
     db := client.Database("telegram_bot_test")
     defer db.Drop(context.Background())
 
