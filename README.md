@@ -21,10 +21,6 @@
 - **日志记录**：自动记录所有消息处理
 - **权限管理**：自动加载用户信息
 - **限流保护**：令牌桶算法防止滥用
-
-### 📊 监控与运维
-- **Prometheus 指标**：消息量、延迟、错误率
-- **Grafana 仪表板**：可视化监控
 - **健康检查**：应用和数据库状态
 - **优雅关闭**：处理中的消息不丢失
 
@@ -153,10 +149,6 @@ make docker-logs
 # 停止服务
 make docker-down
 ```
-
-访问监控面板：
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000 (admin/admin)
 
 ### 4. 本地开发
 
@@ -293,15 +285,6 @@ make test-integration
 make test-coverage
 ```
 
-## 📊 监控指标
-
-Bot 在端口 9091 暴露 Prometheus 指标：
-
-- `bot_messages_total`: 总消息数（按聊天类型）
-- `bot_handler_duration_seconds`: 处理器执行时间
-- `bot_handler_errors_total`: 处理器错误数
-- `bot_active_users`: 活跃用户数
-
 ## 🔧 配置说明
 
 ### 环境变量
@@ -378,8 +361,6 @@ make clean          # 清理构建产物
 
 - [go-telegram/bot](https://github.com/go-telegram/bot) - Telegram Bot API 客户端
 - [MongoDB](https://www.mongodb.com/) - 数据库
-- [Prometheus](https://prometheus.io/) - 监控系统
-- [Grafana](https://grafana.com/) - 可视化平台
 
 ## 📧 联系方式
 

@@ -80,14 +80,6 @@ make test
 make build
 ```
 
-### 1.5 访问监控面板
-
-- **Grafana**: http://localhost:3000
-  - 默认用户名: `admin`
-  - 默认密码: 在 `.env` 文件中设置的 `GRAFANA_PASSWORD`
-
-- **Prometheus**: http://localhost:9090
-
 ---
 
 ## 2. Linode 生产环境部署
@@ -165,9 +157,6 @@ ENVIRONMENT=production
 LOG_LEVEL=info
 LOG_FORMAT=json
 PORT=8080
-
-# Monitoring
-GRAFANA_PASSWORD=your_grafana_password
 EOF
 ```
 
@@ -217,35 +206,6 @@ services:
       retries: 5
       start_period: 40s
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    restart: unless-stopped
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    networks:
-      - bot-network
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana_data:/var/lib/grafana
-    ports:
-      - "3000:3000"
-    networks:
-      - bot-network
-    depends_on:
-      - prometheus
-
 networks:
   bot-network:
     driver: bridge
@@ -253,8 +213,6 @@ networks:
 volumes:
   mongodb_data:
   mongodb_config:
-  prometheus_data:
-  grafana_data:
 EOF
 ```
 
@@ -287,7 +245,6 @@ EOF
 | `PROD_SSH_KEY` | SSH 私钥（完整内容） | `-----BEGIN OPENSSH PRIVATE KEY-----\n...` |
 | `TELEGRAM_TOKEN` | Telegram Bot Token | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
 | `MONGO_ROOT_PASSWORD` | MongoDB root 密码 | `your_secure_password` |
-| `GRAFANA_PASSWORD` | Grafana admin 密码 | `your_grafana_password` |
 
 ### 3.3 配置 GHCR 访问权限
 
@@ -451,14 +408,6 @@ docker exec -it mongodb mongosh
 > db.system.profile.find().sort({ts:-1}).limit(10)
 ```
 
-### 6.5 监控告警
-
-访问 Grafana 面板查看监控指标：
-- Bot 响应时间
-- 命令处理成功率
-- MongoDB 连接池状态
-- 内存和 CPU 使用率
-
 ---
 
 ## 附录
@@ -517,9 +466,8 @@ docker exec -it mongodb mongosh
    - 配置合理的超时时间
 
 3. **监控**:
-   - 配置 Prometheus 告警规则
-   - 定期查看 Grafana 面板
    - 启用日志聚合分析
+   - 监控系统资源使用情况
 
 ---
 

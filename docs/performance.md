@@ -508,39 +508,6 @@ func DeleteUserCaches(userIDs []int64) error {
 
 ## 性能监控
 
-### Prometheus Metrics
-
-已集成的指标：
-
-```go
-// Counter 指标
-commandsTotal          // 命令执行总数
-commandsSuccessTotal   // 命令成功总数
-commandsFailureTotal   // 命令失败总数
-messagesTotal          // 消息总数
-rateLimitRejects       // 限流拒绝次数
-
-// Histogram 指标
-commandDuration        // 命令执行时长
-
-// Gauge 指标
-activeUsers            // 活跃用户数
-activeGroups           // 活跃群组数
-```
-
-### 查询示例
-
-```promql
-# 命令执行成功率
-rate(commands_success_total[5m]) / rate(commands_total[5m])
-
-# P95 响应时间
-histogram_quantile(0.95, rate(command_duration_seconds_bucket[5m]))
-
-# 限流拒绝率
-rate(rate_limit_rejects_total[5m])
-```
-
 ### pprof 性能分析
 
 启用 pprof：
@@ -659,11 +626,10 @@ go tool pprof http://localhost:6060/debug/pprof/goroutine
 
 ### 监控
 
-1. ✅ 集成 Prometheus metrics
-2. ✅ 监控关键业务指标
-3. ✅ 设置告警规则
-4. ✅ 定期进行性能分析
-5. ✅ 建立性能基准
+1. ✅ 监控关键业务指标
+2. ✅ 定期进行性能分析
+3. ✅ 建立性能基准
+4. ✅ 使用日志分析工具
 
 ---
 

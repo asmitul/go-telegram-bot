@@ -1032,69 +1032,6 @@ func (h *ErrorCollector) ContinueChain() bool {
 }
 ```
 
-### 场景 3：Prometheus 指标导出
-
-```go
-package listener
-
-import (
-    "github.com/prometheus/client_golang/prometheus"
-    "telegram-bot/internal/handler"
-)
-
-type PrometheusExporter struct {
-    messageCounter *prometheus.CounterVec
-    userGauge      *prometheus.GaugeVec
-}
-
-func NewPrometheusExporter() *PrometheusExporter {
-    exporter := &PrometheusExporter{
-        messageCounter: prometheus.NewCounterVec(
-            prometheus.CounterOpts{
-                Name: "telegram_messages_total",
-                Help: "Total number of messages",
-            },
-            []string{"chat_type"},
-        ),
-        userGauge: prometheus.NewGaugeVec(
-            prometheus.GaugeOpts{
-                Name: "telegram_active_users",
-                Help: "Number of active users",
-            },
-            []string{"chat_id"},
-        ),
-    }
-
-    // 注册指标
-    prometheus.MustRegister(exporter.messageCounter)
-    prometheus.MustRegister(exporter.userGauge)
-
-    return exporter
-}
-
-func (h *PrometheusExporter) Match(ctx *handler.Context) bool {
-    return true
-}
-
-func (h *PrometheusExporter) Handle(ctx *handler.Context) error {
-    // 增加消息计数
-    h.messageCounter.WithLabelValues(ctx.ChatType).Inc()
-
-    // 更新活跃用户数（需要额外的跟踪逻辑）
-    // h.userGauge.WithLabelValues(fmt.Sprintf("%d", ctx.ChatID)).Set(float64(activeCount))
-
-    return nil
-}
-
-func (h *PrometheusExporter) Priority() int {
-    return 970
-}
-
-func (h *PrometheusExporter) ContinueChain() bool {
-    return true
-}
-```
-
 ---
 
 ## 常见问题
@@ -1295,7 +1232,6 @@ func (h *StatsCommand) Handle(ctx *handler.Context) error {
 - [项目内置示例 - MessageLogger](../../internal/handlers/listener/message_logger.go)
 - [项目内置示例 - Analytics](../../internal/handlers/listener/analytics.go)
 - [Go sync 包文档](https://pkg.go.dev/sync)
-- [Prometheus Go 客户端](https://pkg.go.dev/github.com/prometheus/client_golang)
 
 ### 相关文档
 

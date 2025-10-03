@@ -195,7 +195,6 @@ func (uc *CreateUserUseCase) Execute(userID int64, username string) error {
 - **Telegram**: Telegram API 封装
 - **Cache**: Redis/Memory 缓存
 - **Health**: 健康检查
-- **Metrics**: Prometheus 监控
 - **RateLimit**: 限流器
 
 **特点**:
@@ -593,7 +592,6 @@ Telegram    Bot      Handler    GroupRepo   Cache
 
 | 组件 | 技术 | 用途 |
 |-----|------|-----|
-| 监控 | Prometheus | 指标采集 |
 | 日志 | 结构化日志 | 日志记录 |
 | 测试 | testify, gomock | 单元测试 |
 
@@ -604,7 +602,6 @@ require (
     github.com/go-telegram/bot v1.x.x
     go.mongodb.org/mongo-driver v1.x.x
     github.com/redis/go-redis/v9 v9.x.x
-    github.com/prometheus/client_golang v1.x.x
     github.com/stretchr/testify v1.x.x
     go.uber.org/mock v0.x.x
 )
@@ -859,7 +856,6 @@ type MyEntityRepository struct {
 
 - ✅ **日志级别**: Debug/Info/Warn/Error
 - ✅ **结构化日志**: 使用键值对
-- ✅ **指标收集**: Prometheus metrics
 - ✅ **健康检查**: HTTP endpoints
 
 ### 5. 错误处理
@@ -927,18 +923,6 @@ type MyEntityRepository struct {
 ┌─────────────┐
 │   Bot App   │
 └──────┬──────┘
-       │
-       │ Metrics
-       ▼
-┌─────────────┐
-│ Prometheus  │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Grafana    │
-│  Dashboard  │
-└─────────────┘
 ```
 
 ---
@@ -964,7 +948,6 @@ type MyEntityRepository struct {
 - [Go Telegram Bot API](https://github.com/go-telegram/bot)
 - [MongoDB Go Driver](https://www.mongodb.com/docs/drivers/go/current/)
 - [Go Redis Client](https://redis.uptrace.dev/)
-- [Prometheus Go Client](https://prometheus.io/docs/guides/go-application/)
 
 ---
 

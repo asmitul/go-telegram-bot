@@ -37,7 +37,6 @@
 
 **优点**：
 - ✅ 一键部署所有服务
-- ✅ 包含监控组件（Prometheus + Grafana）
 - ✅ 易于管理和维护
 - ✅ 资源隔离
 
@@ -96,10 +95,6 @@ TELEGRAM_TOKEN=<你的_bot_token>
 MONGO_ROOT_USER=admin
 MONGO_ROOT_PASSWORD=<强密码>
 
-# Grafana
-GRAFANA_USER=admin
-GRAFANA_PASSWORD=<强密码>
-
 # 日志
 LOG_LEVEL=info
 LOG_FORMAT=json
@@ -126,10 +121,6 @@ docker logs telegram-bot
 
 # 检查 MongoDB
 docker exec -it telegram-bot-mongo mongosh
-
-# 访问监控
-# Prometheus: http://your-server:9090
-# Grafana: http://your-server:3000
 ```
 
 ### 4. 服务管理
@@ -306,51 +297,6 @@ sudo systemctl restart telegram-bot
 | `RATE_LIMIT_ENABLED` | `false` | 是否启用限流 |
 | `RATE_LIMIT_PER_MIN` | `20` | 每分钟最大请求数 |
 | `MAX_WORKERS` | `10` | 最大并发数 |
-
----
-
-## 监控告警
-
-### Prometheus 配置
-
-**位置**：`monitoring/prometheus/prometheus.yml`
-
-```yaml
-global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'telegram-bot'
-    static_configs:
-      - targets: ['bot:9091']
-
-  - job_name: 'mongodb'
-    static_configs:
-      - targets: ['mongodb-exporter:9216']
-```
-
-### 关键指标
-
-| 指标 | 说明 | 告警阈值 |
-|------|------|---------|
-| `bot_messages_total` | 消息总数 | - |
-| `bot_handler_errors_total` | 错误数 | > 100/min |
-| `bot_handler_duration_seconds` | 处理延迟 | > 1s |
-| `bot_active_users` | 活跃用户数 | - |
-
-### Grafana 仪表板
-
-访问：`http://your-server:3000`
-
-默认账户：
-- 用户名：`admin`
-- 密码：见 `.env` 中的 `GRAFANA_PASSWORD`
-
-**预置仪表板**：
-1. Bot 概览
-2. 性能监控
-3. 错误追踪
-4. MongoDB 状态
 
 ---
 
@@ -594,10 +540,6 @@ make docker-down        # 停止
 make docker-logs        # 查看日志
 make docker-restart     # 重启
 make docker-clean       # 清理
-
-# 监控
-http://localhost:9090   # Prometheus
-http://localhost:3000   # Grafana
 
 # 健康检查
 curl http://localhost:8080/health

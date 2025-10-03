@@ -147,7 +147,7 @@ make ci-check       # Run all CI checks (fmt + lint + test)
 
 ### Docker Development
 ```bash
-make docker-up      # Start all services (bot, MongoDB, Prometheus, Grafana)
+make docker-up      # Start all services (bot, MongoDB)
 make docker-down    # Stop all services
 make docker-logs    # Follow bot logs
 make docker-clean   # Remove all containers and volumes
@@ -443,7 +443,6 @@ import (
 
 - `github.com/go-telegram/bot`: Telegram Bot API client
 - `go.mongodb.org/mongo-driver`: MongoDB driver
-- `github.com/prometheus/client_golang`: Prometheus metrics
 - `github.com/sirupsen/logrus`: Structured logging
 - `github.com/joho/godotenv`: Environment variable loading
 - `github.com/stretchr/testify`: Testing utilities

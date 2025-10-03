@@ -159,11 +159,6 @@ deploy-staging: ## 部署到测试环境
 	@echo "部署到测试环境..."
 	@./scripts/deploy.sh staging
 
-# 监控
-metrics: ## 查看应用指标
-	@echo "打开 Prometheus: http://localhost:9090"
-	@echo "打开 Grafana: http://localhost:3000"
-
 logs: ## 查看应用日志
 	@$(DOCKER_COMPOSE) logs -f --tail=100 bot
 
