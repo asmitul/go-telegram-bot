@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"telegram-bot/internal/domain/group"
 	"telegram-bot/internal/domain/user"
 
 	"github.com/go-telegram/bot"
@@ -29,6 +30,9 @@ type Context struct {
 	FirstName string
 	LastName  string
 	User      *user.User // 数据库用户对象（由中间件注入）
+
+	// 群组信息
+	Group *group.Group // 数据库群组对象（由中间件注入）
 
 	// 消息内容
 	Text      string

@@ -35,21 +35,20 @@ func (h *StatsHandler) Handle(ctx *handler.Context) error {
 		return err
 	}
 
-	// 获取群组信息
-	g, err := h.groupRepo.FindByID(ctx.ChatID)
-	if err != nil {
-		return fmt.Errorf("获取群组信息失败: %w", err)
+	// 群组信息由 GroupMiddleware 自动注入
+	if ctx.Group == nil {
+		return fmt.Errorf("❌ 无法获取群组信息，请稍后重试")
 	}
 
 	// 构建统计信息
 	response := fmt.Sprintf(
 		"📊 <b>群组统计</b>\n\n"+
-			"🏷️ 群组名称: %s\n"+
-			"🆔 群组 ID: %d\n"+
+			"🏷️ 群组名称: <b>%s</b>\n"+
+			"🆔 群组 ID: <code>%d</code>\n"+
 			"📅 创建时间: %s\n",
 		ctx.ChatTitle,
 		ctx.ChatID,
-		g.CreatedAt.Format("2006-01-02 15:04:05"),
+		ctx.Group.CreatedAt.Format("2006-01-02 15:04:05"),
 	)
 
 	return ctx.ReplyHTML(response)
