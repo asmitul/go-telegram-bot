@@ -244,7 +244,6 @@
 
 | 权限级别 | 值 | 说明 | 可用命令 |
 |---------|---|------|---------|
-| `PermissionNone` | 0 | 无权限 | 无 |
 | `PermissionUser` | 1 | 普通用户 | ping, help, stats |
 | `PermissionAdmin` | 2 | 管理员 | 所有用户命令 + mute, manage, welcome |
 | `PermissionSuperAdmin` | 3 | 超级管理员 | 所有管理员命令 + admin |

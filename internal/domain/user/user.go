@@ -13,15 +13,25 @@ var (
 type Permission int
 
 const (
-	PermissionNone Permission = iota
-	PermissionUser
-	PermissionAdmin
-	PermissionSuperAdmin
-	PermissionOwner
+	PermissionUser       Permission = 1
+	PermissionAdmin      Permission = 2
+	PermissionSuperAdmin Permission = 3
+	PermissionOwner      Permission = 4
 )
 
 func (p Permission) String() string {
-	return [...]string{"None", "User", "Admin", "SuperAdmin", "Owner"}[p]
+	switch p {
+	case PermissionUser:
+		return "User"
+	case PermissionAdmin:
+		return "Admin"
+	case PermissionSuperAdmin:
+		return "SuperAdmin"
+	case PermissionOwner:
+		return "Owner"
+	default:
+		return "Unknown"
+	}
 }
 
 func (p Permission) CanManage(target Permission) bool {

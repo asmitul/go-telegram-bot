@@ -239,11 +239,10 @@ type User struct {
 **权限系统**：
 ```go
 const (
-    PermissionNone Permission = iota   // 0: 无权限
-    PermissionUser                     // 1: 普通用户
-    PermissionAdmin                    // 2: 管理员
-    PermissionSuperAdmin               // 3: 超级管理员
-    PermissionOwner                    // 4: 所有者
+    PermissionUser       Permission = 1  // 普通用户
+    PermissionAdmin      Permission = 2  // 管理员
+    PermissionSuperAdmin Permission = 3  // 超级管理员
+    PermissionOwner      Permission = 4  // 所有者
 )
 ```
 

@@ -1215,7 +1215,6 @@ func parseCommandName(text string) string
 type Permission int
 
 const (
-    PermissionNone       Permission = 0  // 无权限
     PermissionUser       Permission = 1  // 普通用户
     PermissionAdmin      Permission = 2  // 管理员
     PermissionSuperAdmin Permission = 3  // 超级管理员

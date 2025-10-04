@@ -11,14 +11,13 @@
 ## ✅ 已实现的基础设施
 
 ### 权限系统核心
-- **权限级别** (`internal/domain/user/user.go:12-25`):
+- **权限级别** (`internal/domain/user/user.go:15-20`):
   ```go
   const (
-      PermissionNone       // 0
-      PermissionUser       // 1 - 默认用户
-      PermissionAdmin      // 2 - 管理员
-      PermissionSuperAdmin // 3 - 超级管理员
-      PermissionOwner      // 4 - 群主
+      PermissionUser       Permission = 1  // 普通用户（默认）
+      PermissionAdmin      Permission = 2  // 管理员
+      PermissionSuperAdmin Permission = 3  // 超级管理员
+      PermissionOwner      Permission = 4  // 所有者
   )
   ```
 
@@ -156,7 +155,7 @@ func (h *PromoteHandler) Handle(ctx *handler.Context) error {
 
 **实现要点**:
 - 逻辑与 `/promote` 类似，但 `newPerm = currentPerm - 1`
-- 不能降低到 PermissionNone（最低为 PermissionUser）
+- 最低权限为 PermissionUser（已经是 User 的用户无法继续降低）
 - 权限保护：不能降低比自己高的用户
 
 ---

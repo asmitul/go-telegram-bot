@@ -106,7 +106,6 @@ func TestUserRepository_DocumentConversion(t *testing.T) {
 			name       string
 			permission user.Permission
 		}{
-			{"NoPermission", user.PermissionNone},
 			{"User", user.PermissionUser},
 			{"Admin", user.PermissionAdmin},
 			{"SuperAdmin", user.PermissionSuperAdmin},
@@ -133,18 +132,16 @@ func TestUserRepository_DocumentConversion(t *testing.T) {
 		u.SetPermission(-200, user.PermissionAdmin)
 		u.SetPermission(-300, user.PermissionSuperAdmin)
 		u.SetPermission(-400, user.PermissionOwner)
-		u.SetPermission(-500, user.PermissionNone)
 
 		doc := repo.toDocument(u)
-		assert.Len(t, doc.Permissions, 5)
+		assert.Len(t, doc.Permissions, 4)
 
 		converted := repo.toDomain(doc)
-		assert.Len(t, converted.Permissions, 5)
+		assert.Len(t, converted.Permissions, 4)
 		assert.Equal(t, user.PermissionUser, converted.GetPermission(-100))
 		assert.Equal(t, user.PermissionAdmin, converted.GetPermission(-200))
 		assert.Equal(t, user.PermissionSuperAdmin, converted.GetPermission(-300))
 		assert.Equal(t, user.PermissionOwner, converted.GetPermission(-400))
-		assert.Equal(t, user.PermissionNone, converted.GetPermission(-500))
 	})
 }
 
