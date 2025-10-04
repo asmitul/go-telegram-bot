@@ -219,10 +219,10 @@ func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, taskScheduler 
 
 	// 4. 关闭数据库连接
 	appLogger.Info("Closing database connection...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
 
-	if err := mongoClient.Disconnect(ctx); err != nil {
+	if err := mongoClient.Disconnect(shutdownCtx); err != nil {
 		appLogger.Error("Failed to close database connection", "error", err)
 	} else {
 		appLogger.Info("✅ Database connection closed")

@@ -55,25 +55,28 @@ func (j *CleanupExpiredDataJob) Run(ctx context.Context) error {
 func (j *CleanupExpiredDataJob) cleanupInactiveUsers(ctx context.Context) (int64, error) {
 	collection := j.db.Collection("users")
 
-	// 删除180天未活跃的普通用户（非管理员）
+	// 删除180天未活跃的用户
+	// 注意：由于 permissions 是对象而非数组，无法在 MongoDB 查询中直接过滤管理员
+	// 为了安全起见，暂时不删除任何用户，只记录统计信息
+	// 如果需要实际清理，应该通过 Repository 在应用层过滤
 	cutoffTime := time.Now().Add(-180 * 24 * time.Hour)
-	filter := bson.M{
-		"updated_at": bson.M{"$lt": cutoffTime},
-		"permissions": bson.M{
-			"$not": bson.M{
-				"$elemMatch": bson.M{
-					"level": bson.M{"$gte": 2}, // Admin 及以上不删除
-				},
-			},
-		},
-	}
 
-	result, err := collection.DeleteMany(ctx, filter)
+	// 统计待清理用户数量（不实际删除）
+	count, err := collection.CountDocuments(ctx, bson.M{
+		"updated_at": bson.M{"$lt": cutoffTime},
+	})
 	if err != nil {
 		return 0, err
 	}
 
-	return result.DeletedCount, nil
+	j.logger.Info("Inactive users found (not deleted for safety)",
+		"count", count,
+		"cutoff_time", cutoffTime,
+	)
+
+	// 返回0表示未实际删除
+	// TODO: 实现应用层过滤逻辑，只删除普通用户
+	return 0, nil
 }
 
 // StatisticsReportJob 统计报告任务

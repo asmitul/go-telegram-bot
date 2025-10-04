@@ -39,6 +39,11 @@ func (h *DemoteHandler) Handle(ctx *handler.Context) error {
 		return ctx.Reply(fmt.Sprintf("❌ %s", err.Error()))
 	}
 
+	// 2.1. 不能对自己执行操作
+	if targetUser.ID == ctx.UserID {
+		return ctx.Reply("❌ 不能修改自己的权限")
+	}
+
 	// 3. 获取当前权限
 	currentPerm := targetUser.GetPermission(ctx.ChatID)
 
