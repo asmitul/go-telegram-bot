@@ -74,34 +74,6 @@
 - 群组查询：从 80ms → 3ms（26x 提升）
 - 命令状态查询：从 40ms → 1ms（40x 提升）
 
-#### 3. 警告集合 (warnings)
-
-```javascript
-// 用户ID索引
-{ "user_id": 1 }
-
-// 群组ID索引
-{ "group_id": 1 }
-
-// 用户+群组复合索引（最常用）
-{ "user_id": 1, "group_id": 1 }
-
-// 用户+群组+时间复合索引（统计）
-{ "user_id": 1, "group_id": 1, "created_at": -1 }
-
-// TTL索引（自动清理过期数据）
-{ "created_at": 1 }  // 90天后自动删除
-```
-
-**使用场景**：
-- 查询用户在某群组的警告记录
-- 统计用户警告数量
-- 自动清理过期警告
-
-**性能提升**：
-- 警告查询：从 120ms → 4ms（30x 提升）
-- 自动清理：无需手动维护，节省存储空间
-
 ### 索引管理
 
 #### 创建索引
@@ -575,9 +547,7 @@ go tool pprof http://localhost:6060/debug/pprof/goroutine
 | 命令 | 优化前 | 优化后 | 改善 |
 |------|--------|--------|------|
 | /ping | 25ms | 8ms | 68% |
-| /ban | 180ms | 45ms | 75% |
 | /stats | 320ms | 80ms | 75% |
-| /warn | 250ms | 60ms | 76% |
 
 ---
 
@@ -641,7 +611,8 @@ go tool pprof http://localhost:6060/debug/pprof/goroutine
 
 ```javascript
 // 按群组ID分片
-sh.shardCollection("telegram_bot.warnings", { "group_id": 1 })
+sh.shardCollection("telegram_bot.users", { "group_id": 1 })
+sh.shardCollection("telegram_bot.groups", { "_id": 1 })
 ```
 
 ### 2. 读写分离
@@ -663,10 +634,9 @@ opts := options.Find().SetReadPreference(readpref.SecondaryPreferred())
 
 ```go
 // 将耗时任务放入队列
-queue.Publish(ctx, "ban_user", BanTask{
+queue.Publish(ctx, "send_notification", NotificationTask{
     UserID:  userID,
-    GroupID: groupID,
-    Reason:  reason,
+    Message: message,
 })
 ```
 

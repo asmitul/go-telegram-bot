@@ -38,16 +38,6 @@ func (a *API) BanChatMemberWithDuration(chatID, userID int64, until time.Time) e
 	return err
 }
 
-// UnbanChatMember 解封群组成员
-func (a *API) UnbanChatMember(chatID, userID int64) error {
-	_, err := a.bot.UnbanChatMember(context.Background(), &bot.UnbanChatMemberParams{
-		ChatID:       chatID,
-		UserID:       userID,
-		OnlyIfBanned: true,
-	})
-	return err
-}
-
 // RestrictChatMember 限制群组成员权限（禁言等）
 func (a *API) RestrictChatMember(chatID, userID int64, permissions models.ChatPermissions) error {
 	_, err := a.bot.RestrictChatMember(context.Background(), &bot.RestrictChatMemberParams{

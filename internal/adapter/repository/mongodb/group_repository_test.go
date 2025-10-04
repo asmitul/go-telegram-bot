@@ -17,7 +17,6 @@ func TestGroupRepository_DocumentConversion(t *testing.T) {
 		g.DisableCommand("ban", 456)
 		g.Settings = map[string]interface{}{
 			"welcome": "enabled",
-			"max_warnings": 3,
 		}
 		g.CreatedAt = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 		g.UpdatedAt = time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
@@ -185,16 +184,13 @@ func TestGroupRepository_Settings(t *testing.T) {
 	t.Run("numeric settings", func(t *testing.T) {
 		g := group.NewGroup(-200, "Test", "supergroup")
 		g.Settings = map[string]interface{}{
-			"max_warnings": 3,
-			"timeout":      300,
+			"timeout": 300,
 		}
 
 		doc := repo.toDocument(g)
-		assert.Equal(t, 3, doc.Settings["max_warnings"])
 		assert.Equal(t, 300, doc.Settings["timeout"])
 
 		converted := repo.toDomain(doc)
-		assert.Equal(t, 3, converted.Settings["max_warnings"])
 		assert.Equal(t, 300, converted.Settings["timeout"])
 	})
 
@@ -353,7 +349,6 @@ func BenchmarkGroupRepository_ToDocument(b *testing.B) {
 	g.EnableCommand("help", 1)
 	g.Settings = map[string]interface{}{
 		"welcome": "Hi!",
-		"max_warnings": 3,
 	}
 
 	b.ResetTimer()

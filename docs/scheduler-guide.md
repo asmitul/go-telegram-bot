@@ -199,13 +199,6 @@ func (j *CleanupExpiredDataJob) Schedule() string {
 func (j *CleanupExpiredDataJob) Run(ctx context.Context) error {
     j.logger.Info("Starting cleanup expired data job")
 
-    // 清理过期的警告记录（超过90天）
-    warningsDeleted, err := j.cleanupExpiredWarnings(ctx)
-    if err != nil {
-        j.logger.Error("Failed to cleanup expired warnings", "error", err)
-        return fmt.Errorf("cleanup warnings failed: %w", err)
-    }
-
     // 清理不活跃的用户数据（超过180天未活跃）
     usersDeleted, err := j.cleanupInactiveUsers(ctx)
     if err != nil {
@@ -214,28 +207,10 @@ func (j *CleanupExpiredDataJob) Run(ctx context.Context) error {
     }
 
     j.logger.Info("Cleanup expired data completed",
-        "warnings_deleted", warningsDeleted,
         "users_deleted", usersDeleted,
     )
 
     return nil
-}
-
-func (j *CleanupExpiredDataJob) cleanupExpiredWarnings(ctx context.Context) (int64, error) {
-    collection := j.db.Collection("warnings")
-
-    // 删除90天前的警告
-    cutoffTime := time.Now().Add(-90 * 24 * time.Hour)
-    filter := bson.M{
-        "created_at": bson.M{"$lt": cutoffTime},
-    }
-
-    result, err := collection.DeleteMany(ctx, filter)
-    if err != nil {
-        return 0, err
-    }
-
-    return result.DeletedCount, nil
 }
 
 func (j *CleanupExpiredDataJob) cleanupInactiveUsers(ctx context.Context) (int64, error) {
@@ -319,106 +294,7 @@ func (j *StatisticsReportJob) Run(ctx context.Context) error {
 }
 ```
 
-### 示例 3：自动解禁任务（项目内置）
-
-```go
-package scheduler
-
-import (
-    "context"
-    "fmt"
-    "time"
-
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/mongo"
-    "telegram-bot/pkg/logger"
-)
-
-// AutoUnbanJob 自动解除临时封禁任务
-type AutoUnbanJob struct {
-    db     *mongo.Database
-    logger logger.Logger
-}
-
-func NewAutoUnbanJob(db *mongo.Database, log logger.Logger) *AutoUnbanJob {
-    return &AutoUnbanJob{
-        db:     db,
-        logger: log,
-    }
-}
-
-func (j *AutoUnbanJob) Name() string {
-    return "AutoUnban"
-}
-
-func (j *AutoUnbanJob) Schedule() string {
-    return "5m" // 每5分钟执行一次
-}
-
-func (j *AutoUnbanJob) Run(ctx context.Context) error {
-    j.logger.Info("Starting auto unban job")
-
-    collection := j.db.Collection("bans")
-
-    // 查找已过期且未解除的封禁记录
-    filter := bson.M{
-        "banned_until": bson.M{"$lte": time.Now()},
-        "unbanned":     false,
-    }
-
-    cursor, err := collection.Find(ctx, filter)
-    if err != nil {
-        return fmt.Errorf("failed to query expired bans: %w", err)
-    }
-    defer cursor.Close(ctx)
-
-    var unbanCount int64
-    for cursor.Next(ctx) {
-        var ban struct {
-            ID          interface{} `bson:"_id"`
-            UserID      int64       `bson:"user_id"`
-            GroupID     int64       `bson:"group_id"`
-            BannedUntil time.Time   `bson:"banned_until"`
-        }
-
-        if err := cursor.Decode(&ban); err != nil {
-            j.logger.Warn("Failed to decode ban record", "error", err)
-            continue
-        }
-
-        // 标记为已解除
-        update := bson.M{
-            "$set": bson.M{
-                "unbanned":    true,
-                "unbanned_at": time.Now(),
-            },
-        }
-
-        _, err := collection.UpdateOne(ctx, bson.M{"_id": ban.ID}, update)
-        if err != nil {
-            j.logger.Error("Failed to mark ban as unbanned",
-                "user_id", ban.UserID,
-                "group_id", ban.GroupID,
-                "error", err,
-            )
-            continue
-        }
-
-        j.logger.Info("User auto-unbanned",
-            "user_id", ban.UserID,
-            "group_id", ban.GroupID,
-        )
-
-        unbanCount++
-    }
-
-    j.logger.Info("Auto unban job completed", "unban_count", unbanCount)
-
-    return nil
-}
-```
-
-### 示例 4：使用 SimpleJob（快捷方式）
+### 示例 3：使用 SimpleJob（快捷方式）
 
 ```go
 // 在 main.go 中直接创建简单任务

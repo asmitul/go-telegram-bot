@@ -344,11 +344,11 @@ func (c *Context) RequirePermission(required user.Permission) error
 
 **示例**:
 ```go
-func (h *BanHandler) Handle(ctx *handler.Context) error {
-    if err := ctx.RequirePermission(user.PermissionAdmin); err != nil {
+func (h *StatsHandler) Handle(ctx *handler.Context) error {
+    if err := ctx.RequirePermission(user.PermissionUser); err != nil {
         return err
     }
-    // 执行封禁逻辑
+    // 执行统计逻辑
 }
 ```
 
@@ -824,7 +824,7 @@ return ctx.RequirePermission(c.permission)
 
 **示例**:
 ```go
-func (h *BanHandler) Handle(ctx *handler.Context) error {
+func (h *StatsHandler) Handle(ctx *handler.Context) error {
     if err := h.CheckPermission(ctx); err != nil {
         return err
     }
@@ -1171,14 +1171,14 @@ func ParseArgs(text string) []string
 
 **示例**:
 ```go
-// 输入: "/ban @user 7d spam"
+// 输入: "/stats user @alice"
 args := command.ParseArgs(ctx.Text)
-// 输出: ["@user", "7d", "spam"]
+// 输出: ["user", "@alice"]
 
 if len(args) < 1 {
-    return ctx.Reply("用法: /ban <用户> [时长] [原因]")
+    return ctx.Reply("用法: /stats [user @username]")
 }
-username := args[0]
+action := args[0]
 ```
 
 ---
@@ -1198,9 +1198,9 @@ func parseCommandName(text string) string
 
 **示例**:
 ```
-"/ping"           -> "ping"
-"/ping@mybot"     -> "ping"
-"/ban arg1 arg2"  -> "ban"
+"/ping"            -> "ping"
+"/ping@mybot"      -> "ping"
+"/stats arg1 arg2" -> "stats"
 ```
 
 ---

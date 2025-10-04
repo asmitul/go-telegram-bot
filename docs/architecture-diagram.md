@@ -665,8 +665,6 @@ graph TB
     subgraph Database[MongoDB Atlas - 数据库]
         UsersCol[("users 集合<br/>索引: user_id, username")]
         GroupsCol[("groups 集合<br/>索引: group_id")]
-        WarningsCol[("warnings 集合<br/>（预留）")]
-        BansCol[("bans 集合<br/>（预留）")]
     end
 
     User -.定义.-> UserRepo
@@ -792,12 +790,11 @@ graph TB
     end
 
     subgraph EnabledJobs[已启用的任务]
-        Cleanup["CleanupExpiredData<br/>⏰ 每天 00:00 执行<br/>• 清理 90 天前的警告<br/>• 清理 180 天未活跃用户"]
+        Cleanup["CleanupExpiredData<br/>⏰ 每天 00:00 执行<br/>• 清理 180 天未活跃用户"]
         Stats["StatisticsReport<br/>⏰ 每小时执行<br/>• 统计用户数<br/>• 统计群组数<br/>• 记录日志"]
     end
 
     subgraph DisabledJobs[已配置但未启用]
-        AutoUnban["AutoUnban<br/>⏰ 每 5 分钟<br/>• 检查封禁到期<br/>• 自动解封"]
         CacheWarmup["CacheWarmup<br/>⏰ 每 30 分钟<br/>• 预热常用数据<br/>• 减少查询延迟"]
     end
 
@@ -821,7 +818,6 @@ graph TB
 
     style Cleanup fill:#90EE90
     style Stats fill:#87CEEB
-    style AutoUnban fill:#D3D3D3
     style CacheWarmup fill:#D3D3D3
 ```
 
@@ -1151,17 +1147,14 @@ graph LR
 - Permission - 权限加载
 - RateLimit - 限流控制（可选）
 
-**定时任务（2 个启用 + 2 个配置）**:
+**定时任务（2 个启用 + 1 个配置）**:
 - ✅ CleanupExpiredData - 清理过期数据（每天）
 - ✅ StatisticsReport - 统计报告（每小时）
-- ⚪ AutoUnban - 自动解封（每 5 分钟）- 未启用
 - ⚪ CacheWarmup - 缓存预热（每 30 分钟）- 未启用
 
-**数据库集合（4 个）**:
+**数据库集合（2 个）**:
 - `users` - 用户信息
 - `groups` - 群组信息
-- `warnings` - 警告记录（预留）
-- `bans` - 封禁记录（预留）
 
 ---
 

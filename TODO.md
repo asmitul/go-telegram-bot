@@ -142,18 +142,6 @@
 
 ## 🔧 第四阶段：功能增强
 
-### ✔️ Module 13: Ban 命令增强 (已完成)
-**文件**: `internal/commands/ban/handler.go`
-- [x] 支持回复消息封禁
-- [x] 在 Context 中添加 ReplyToMessage 字段
-- [x] 更新 bot_handler.go 解析回复消息（待集成）
-- [x] 添加封禁原因参数
-- [x] 添加临时封禁（指定时长）
-- [x] 更新测试
-> ✅ 完成时间: 2025-09-30
-> 📝 实现了增强的ban命令，支持回复消息封禁、临时封禁（时长）、封禁原因、多种时长格式
-> 🧪 测试覆盖率: 97.4% (7/7 tests passed, 包含所有子测试)
-
 ### ✔️ Module 14: Mute 命令 (已完成)
 **新建**: `internal/commands/mute/`
 - [x] 创建 handler.go
@@ -166,20 +154,6 @@
 > ✅ 完成时间: 2025-09-30
 > 📝 实现了禁言/解禁功能，支持临时禁言、永久禁言、回复消息禁言、原因记录、多种时长格式
 > 🧪 测试覆盖率: 88.5% (9/9 tests passed, 包含所有子测试)
-
-### ✔️ Module 15: Warn 系统 (已完成)
-**新建**: `internal/commands/warn/`
-- [x] 创建 handler.go
-- [x] /warn <user> <reason> - 警告用户
-- [x] /warn warnings <user> - 查看警告记录
-- [x] /warn clear <user> - 清除警告
-- [x] 警告积累自动踢出（3次）
-- [x] 警告记录持久化（Warning 领域模型 + WarningRepository 接口）
-- [x] 支持回复消息警告/查看/清除
-- [x] 编写 handler_test.go
-> ✅ 完成时间: 2025-09-30
-> 📝 实现了完整的警告系统，支持警告用户、查看记录、清除警告、达到3次自动踢出、持久化存储
-> 🧪 测试覆盖率: 85.4% (8/8 tests passed, 包含所有子测试和集成测试)
 
 ### ✔️ Module 16: 限流器实现 (已完成)
 **新建**: `internal/adapter/ratelimit/`
@@ -242,11 +216,10 @@
 - [x] 更新 install-tools 使用 go.uber.org/mock
 - [x] 添加 gomock 依赖
 > ✅ 完成时间: 2025-10-01
-> 📝 使用 go.uber.org/mock/mockgen 生成了 8 个 mock 文件，共 1143 行代码
+> 📝 使用 go.uber.org/mock/mockgen 生成了 7 个 mock 文件
 > 🎯 生成的 mocks:
 >   - MockUserRepository (user.Repository)
 >   - MockGroupRepository (group.Repository)
->   - MockWarningRepository (user.WarningRepository)
 >   - MockHandler / MockRegistry (command interfaces)
 >   - MockUserManagement / MockGroupCommandConfig / MockGroupConfig (usecase interfaces)
 >   - MockTelegramAPI (TelegramAPI interface)
@@ -257,14 +230,12 @@
 ### ✔️ Module 21: 单元测试 (已完成)
 **文件**: 各命令的 handler_test.go
 - [x] Ping 命令单元测试
-- [x] Ban 命令单元测试
 - [x] Stats 命令单元测试
 - [x] Welcome 命令单元测试
 - [x] Help 命令单元测试
 - [x] Admin 命令单元测试
 - [x] Manage 命令单元测试
 - [x] Mute 命令单元测试
-- [x] Warn 命令单元测试
 - [x] 目标覆盖率 > 80% ✅
 > ✅ 完成时间: 2025-10-01
 > 📝 所有命令都已有完整的单元测试（之前已实现）
@@ -273,13 +244,11 @@
 >   - Stats: 100.0%
 >   - Help: 98.5%
 >   - Manage: 98.2%
->   - Ban: 97.4%
 >   - Welcome: 96.9%
 >   - Admin: 95.8%
 >   - Mute: 88.5%
->   - Warn: 85.4%
-> ✅ 平均覆盖率: 95.6% (远超 80% 目标)
-> 📊 共 9 个命令，所有测试通过
+> ✅ 平均覆盖率: 97.3% (远超 80% 目标)
+> 📊 共 7 个命令，所有测试通过
 
 ### ✔️ Module 22: Repository 测试 (已完成)
 **新建**: `internal/adapter/repository/mongodb/*_test.go`
@@ -567,7 +536,7 @@
 
 - ✔️ **Module 30: 性能优化**
   - 创建了 MongoDB 索引管理器 (internal/adapter/repository/mongodb/indexes.go)
-  - 实现了用户、群组、警告集合的索引（复合索引、TTL索引、稀疏索引）
+  - 实现了用户、群组集合的索引（复合索引、稀疏索引）
   - 优化了 MongoDB 连接池配置（最大连接100、最小连接10、压缩、重试）
   - 优化了 Redis 连接池配置（连接池50、最小空闲连接10）
   - 在 main.go 启动时自动创建数据库索引
@@ -583,13 +552,9 @@
   - 实现了 Scheduler 调度器（支持启动、停止、添加任务）
   - 支持多种时间格式（30s, 5m, 1h, 1d）
   - 实现了清理过期数据任务（CleanupExpiredDataJob）
-    - 自动清理90天前的警告记录
     - 自动清理180天未活跃的普通用户
   - 实现了统计报告任务（StatisticsReportJob）
     - 每小时生成统计报告
-  - 实现了自动解除封禁任务（AutoUnbanJob）
-    - 每5分钟检查过期的临时封禁
-    - 自动标记为已解除
   - 实现了缓存预热任务（CacheWarmupJob）
   - 集成到 main.go，启动时自动启动调度器
   - 优雅关闭时停止所有定时任务

@@ -34,10 +34,6 @@ func (im *IndexManager) EnsureIndexes(ctx context.Context) error {
 		return err
 	}
 
-	if err := im.ensureWarningIndexes(ctx); err != nil {
-		return err
-	}
-
 	im.logger.Info("All indexes created successfully")
 	return nil
 }
@@ -110,55 +106,6 @@ func (im *IndexManager) ensureGroupIndexes(ctx context.Context) error {
 	return im.createIndexes(ctx, collection, indexes, "groups")
 }
 
-// ensureWarningIndexes 创建警告集合索引
-func (im *IndexManager) ensureWarningIndexes(ctx context.Context) error {
-	collection := im.db.Collection("warnings")
-
-	indexes := []mongo.IndexModel{
-		{
-			// 用户ID索引（最常用的查询条件）
-			Keys: bson.D{{Key: "user_id", Value: 1}},
-			Options: options.Index().
-				SetName("idx_warning_user_id"),
-		},
-		{
-			// 群组ID索引
-			Keys: bson.D{{Key: "group_id", Value: 1}},
-			Options: options.Index().
-				SetName("idx_warning_group_id"),
-		},
-		{
-			// 组合索引：用户+群组（最常用的组合查询）
-			Keys: bson.D{
-				{Key: "user_id", Value: 1},
-				{Key: "group_id", Value: 1},
-			},
-			Options: options.Index().
-				SetName("idx_warning_user_group").
-				SetUnique(false),
-		},
-		{
-			// 组合索引：用户+群组+创建时间（用于统计和清理）
-			Keys: bson.D{
-				{Key: "user_id", Value: 1},
-				{Key: "group_id", Value: 1},
-				{Key: "created_at", Value: -1},
-			},
-			Options: options.Index().
-				SetName("idx_warning_user_group_created"),
-		},
-		{
-			// TTL 索引：自动删除过期警告（90天后过期）
-			Keys: bson.D{{Key: "created_at", Value: 1}},
-			Options: options.Index().
-				SetName("idx_warning_ttl").
-				SetExpireAfterSeconds(90 * 24 * 60 * 60), // 90天
-		},
-	}
-
-	return im.createIndexes(ctx, collection, indexes, "warnings")
-}
-
 // createIndexes 创建索引的辅助方法
 func (im *IndexManager) createIndexes(ctx context.Context, collection *mongo.Collection, indexes []mongo.IndexModel, collectionName string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -178,7 +125,7 @@ func (im *IndexManager) createIndexes(ctx context.Context, collection *mongo.Col
 
 // DropAllIndexes 删除所有索引（用于重建）
 func (im *IndexManager) DropAllIndexes(ctx context.Context) error {
-	collections := []string{"users", "groups", "warnings"}
+	collections := []string{"users", "groups"}
 
 	for _, collName := range collections {
 		collection := im.db.Collection(collName)
@@ -200,7 +147,7 @@ func (im *IndexManager) DropAllIndexes(ctx context.Context) error {
 
 // ListIndexes 列出所有索引
 func (im *IndexManager) ListIndexes(ctx context.Context) (map[string][]string, error) {
-	collections := []string{"users", "groups", "warnings"}
+	collections := []string{"users", "groups"}
 	result := make(map[string][]string)
 
 	for _, collName := range collections {

@@ -24,7 +24,7 @@
 
 - ✅ 明确的功能指令（如 `/ping`、`/help`、`/stats`）
 - ✅ 需要权限控制的操作（如管理员命令）
-- ✅ 支持参数的命令（如 `/ban @user`、`/set limit 100`）
+- ✅ 支持参数的命令（如 `/mute @user 1h`、`/set limit 100`）
 - ✅ 需要群组级别启用/禁用控制的功能
 
 ### 不适用场景
@@ -255,80 +255,74 @@ import (
     "telegram-bot/internal/handler"
 )
 
-type BanHandler struct {
+type SetLimitHandler struct {
     *BaseCommand
-    userRepo UserRepository
+    groupRepo GroupRepository
 }
 
-func NewBanHandler(groupRepo GroupRepository, userRepo UserRepository) *BanHandler {
-    return &BanHandler{
+func NewSetLimitHandler(groupRepo GroupRepository) *SetLimitHandler {
+    return &SetLimitHandler{
         BaseCommand: NewBaseCommand(
-            "ban",
-            "封禁用户",
+            "setlimit",
+            "设置群组限制",
             user.PermissionAdmin,
             []string{"group", "supergroup"},
             groupRepo,
         ),
-        userRepo: userRepo,
+        groupRepo: groupRepo,
     }
 }
 
-func (h *BanHandler) Handle(ctx *handler.Context) error {
+func (h *SetLimitHandler) Handle(ctx *handler.Context) error {
     if err := h.CheckPermission(ctx); err != nil {
         return err
     }
 
     args := ParseArgs(ctx.Text)
-    if len(args) < 1 {
+    if len(args) < 2 {
         return ctx.Reply(
-            "❌ 用法: /ban <用户ID或@用户名> [原因]\n\n" +
+            "❌ 用法: /setlimit <类型> <值>\n\n" +
                 "示例:\n" +
-                "  /ban 123456789\n" +
-                "  /ban @username 违规发言\n" +
-                "  /ban 123456789 spam",
+                "  /setlimit message 100\n" +
+                "  /setlimit member 500\n" +
+                "  /setlimit file 10",
         )
     }
 
-    // 解析用户标识
-    userIdentifier := args[0]
-    var targetUserID int64
-    var err error
+    // 解析限制类型
+    limitType := args[0]
+    limitValue := args[1]
 
-    if strings.HasPrefix(userIdentifier, "@") {
-        // 通过用户名查找
-        username := strings.TrimPrefix(userIdentifier, "@")
-        // TODO: 实现用户名查找逻辑
-        return ctx.Reply(fmt.Sprintf("⚠️ 用户名查找功能待实现: %s", username))
-    } else {
-        // 解析用户 ID
-        targetUserID, err = parseUserID(userIdentifier)
-        if err != nil {
-            return ctx.Reply("❌ 无效的用户ID格式")
-        }
+    // 验证限制类型
+    validTypes := []string{"message", "member", "file"}
+    if !contains(validTypes, limitType) {
+        return ctx.Reply("❌ 无效的限制类型")
     }
 
-    // 获取原因
-    reason := "违反群规"
-    if len(args) > 1 {
-        reason = strings.Join(args[1:], " ")
+    // 解析限制值
+    value, err := parseLimit(limitValue)
+    if err != nil {
+        return ctx.Reply("❌ 无效的限制值")
     }
 
-    // 禁止封禁管理员
-    targetUser, err := h.userRepo.FindByID(targetUserID)
-    if err == nil && targetUser.HasPermission(ctx.ChatID, user.PermissionAdmin) {
-        return ctx.Reply("❌ 无法封禁管理员")
+    // 更新群组设置
+    group, err := h.groupRepo.FindByID(ctx.ChatID)
+    if err != nil {
+        return ctx.Reply("❌ 获取群组信息失败")
     }
 
-    // TODO: 执行封禁逻辑
-    // botAPI.BanChatMember(ctx.ChatID, targetUserID)
+    group.SetSetting(fmt.Sprintf("limit_%s", limitType), value)
+    if err := h.groupRepo.Update(group); err != nil {
+        return ctx.Reply("❌ 更新设置失败")
+    }
 
     response := fmt.Sprintf(
-        "🚫 *用户已封禁*\n\n"+
-            "用户ID: `%d`\n"+
-            "原因: %s\n"+
+        "✅ *限制已更新*\n\n"+
+            "类型: %s\n"+
+            "值: %d\n"+
             "操作者: %s",
-        targetUserID,
-        reason,
+        limitType,
+        value,
         ctx.FirstName,
     )
 
@@ -416,7 +410,7 @@ CheckPermission(ctx *handler.Context) error // 检查用户权限
 | 权限级别 | 常量 | 说明 | 典型命令 |
 |---------|------|------|---------|
 | 普通用户 | `PermissionUser` | 默认权限 | `/ping`, `/help` |
-| 管理员 | `PermissionAdmin` | 群组管理员 | `/stats`, `/ban` |
+| 管理员 | `PermissionAdmin` | 群组管理员 | `/stats`, `/mute` |
 | 超级管理员 | `PermissionSuperAdmin` | 可配置命令 | `/enable`, `/disable` |
 | 所有者 | `PermissionOwner` | 最高权限 | `/shutdown`, `/setadmin` |
 
@@ -1026,8 +1020,8 @@ func (h *CleanupHandler) Handle(ctx *handler.Context) error {
         return ctx.Reply(
             "❌ 用法: /cleanup <类型>\n\n" +
                 "可用类型:\n" +
-                "  • warnings - 清除所有警告记录\n" +
                 "  • messages - 清除消息统计\n" +
+                "  • cache - 清除缓存数据\n" +
                 "  • all - 清除所有数据",
         )
     }
@@ -1037,17 +1031,17 @@ func (h *CleanupHandler) Handle(ctx *handler.Context) error {
     var deletedCount int
 
     switch cleanupType {
-    case "warnings":
-        // TODO: 清除警告记录
-        deletedCount = 0
     case "messages":
         // TODO: 清除消息统计
+        deletedCount = 0
+    case "cache":
+        // TODO: 清除缓存数据
         deletedCount = 0
     case "all":
         // TODO: 清除所有数据
         deletedCount = 0
     default:
-        return ctx.Reply("❌ 未知的清理类型，请使用: warnings, messages, all")
+        return ctx.Reply("❌ 未知的清理类型，请使用: messages, cache, all")
     }
 
     return ctx.Reply(fmt.Sprintf("✅ 已清理 %d 条 %s 数据", deletedCount, cleanupType))
@@ -1248,16 +1242,16 @@ chatTypes: nil // 传 nil 也支持所有类型
 func (h *Handler) Handle(ctx *handler.Context) error {
     // 方式1：完整文本
     fullText := ctx.Text
-    // 例如："/ban @user spam" -> "/ban @user spam"
+    // 例如："/setlimit message 100" -> "/setlimit message 100"
 
     // 方式2：移除命令部分
-    argsText := strings.TrimPrefix(ctx.Text, "/ban")
+    argsText := strings.TrimPrefix(ctx.Text, "/setlimit")
     argsText = strings.TrimSpace(argsText)
-    // 例如："/ban @user spam" -> "@user spam"
+    // 例如："/setlimit message 100" -> "message 100"
 
     // 方式3：使用 ParseArgs
     args := ParseArgs(ctx.Text)
-    // 例如："/ban @user spam" -> ["@user", "spam"]
+    // 例如："/setlimit message 100" -> ["message", "100"]
 
     return nil
 }

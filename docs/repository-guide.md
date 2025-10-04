@@ -471,23 +471,6 @@ func (im *IndexManager) ensureGroupIndexes(ctx context.Context) error {
 }
 ```
 
-### TTL 索引（自动清理）
-
-```go
-func (im *IndexManager) ensureWarningIndexes(ctx context.Context) error {
-    indexes := []mongo.IndexModel{
-        {
-            // TTL 索引：90天后自动删除
-            Keys: bson.D{{Key: "created_at", Value: 1}},
-            Options: options.Index().
-                SetName("idx_warning_ttl").
-                SetExpireAfterSeconds(90 * 24 * 60 * 60),
-        },
-    }
-    // ...
-}
-```
-
 ### 索引管理工具
 
 ```go
