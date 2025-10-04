@@ -89,8 +89,8 @@ func (r *GroupRepository) toDomain(doc *groupDocument) *group.Group {
 }
 
 // FindByID 根据 ID 查找群组
-func (r *GroupRepository) FindByID(id int64) (*group.Group, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *GroupRepository) FindByID(ctx context.Context, id int64) (*group.Group, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var doc groupDocument
@@ -106,8 +106,8 @@ func (r *GroupRepository) FindByID(id int64) (*group.Group, error) {
 }
 
 // Save 保存群组
-func (r *GroupRepository) Save(g *group.Group) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *GroupRepository) Save(ctx context.Context, g *group.Group) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	doc := r.toDocument(g)
@@ -116,8 +116,8 @@ func (r *GroupRepository) Save(g *group.Group) error {
 }
 
 // Update 更新群组
-func (r *GroupRepository) Update(g *group.Group) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *GroupRepository) Update(ctx context.Context, g *group.Group) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	doc := r.toDocument(g)
@@ -137,8 +137,8 @@ func (r *GroupRepository) Update(g *group.Group) error {
 }
 
 // Delete 删除群组
-func (r *GroupRepository) Delete(id int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *GroupRepository) Delete(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
@@ -146,8 +146,8 @@ func (r *GroupRepository) Delete(id int64) error {
 }
 
 // FindAll 查找所有群组
-func (r *GroupRepository) FindAll() ([]*group.Group, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *GroupRepository) FindAll(ctx context.Context) ([]*group.Group, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	cursor, err := r.collection.Find(ctx, bson.M{})

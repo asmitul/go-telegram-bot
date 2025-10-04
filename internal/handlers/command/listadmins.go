@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"telegram-bot/internal/domain/user"
@@ -29,13 +30,15 @@ func NewListAdminsHandler(groupRepo GroupRepository, userRepo UserRepository) *L
 
 // Handle 处理命令
 func (h *ListAdminsHandler) Handle(ctx *handler.Context) error {
+	reqCtx := context.TODO()
+
 	// 1. 检查权限
 	if err := h.CheckPermission(ctx); err != nil {
 		return err
 	}
 
 	// 2. 查询所有管理员
-	admins, err := h.userRepo.FindAdminsByGroup(ctx.ChatID)
+	admins, err := h.userRepo.FindAdminsByGroup(reqCtx, ctx.ChatID)
 	if err != nil {
 		return ctx.Reply("❌ 查询管理员列表失败，请稍后重试")
 	}

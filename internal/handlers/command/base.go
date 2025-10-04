@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"telegram-bot/internal/domain/group"
 	"telegram-bot/internal/domain/user"
@@ -9,17 +10,17 @@ import (
 
 // GroupRepository 群组仓储接口（简化版）
 type GroupRepository interface {
-	FindByID(id int64) (*group.Group, error)
+	FindByID(ctx context.Context, id int64) (*group.Group, error)
 }
 
 // UserRepository 用户仓储接口（简化版）
 type UserRepository interface {
-	FindByID(id int64) (*user.User, error)
-	FindByUsername(username string) (*user.User, error)
-	Save(user *user.User) error
-	Update(user *user.User) error
-	UpdatePermission(userID int64, groupID int64, perm user.Permission) error
-	FindAdminsByGroup(groupID int64) ([]*user.User, error)
+	FindByID(ctx context.Context, id int64) (*user.User, error)
+	FindByUsername(ctx context.Context, username string) (*user.User, error)
+	Save(ctx context.Context, user *user.User) error
+	Update(ctx context.Context, user *user.User) error
+	UpdatePermission(ctx context.Context, userID int64, groupID int64, perm user.Permission) error
+	FindAdminsByGroup(ctx context.Context, groupID int64) ([]*user.User, error)
 }
 
 // BaseCommand 命令处理器基类
@@ -79,13 +80,17 @@ func (c *BaseCommand) Match(ctx *handler.Context) bool {
 
 	// 5. 检查群组是否启用（如果是群组且有 groupRepo）
 	if ctx.IsGroup() && c.groupRepo != nil {
-		g, err := c.groupRepo.FindByID(ctx.ChatID)
+		reqCtx := context.TODO() // TODO: 从 handler.Context 传递
+		g, err := c.groupRepo.FindByID(reqCtx, ctx.ChatID)
 		if err != nil {
 			// 区分群组不存在和数据库错误
-			// 群组不存在是正常情况（中间件会自动创建），继续执行
-			// 数据库错误需要记录（但不阻止命令执行，降级处理）
+			if err == group.ErrGroupNotFound {
+				// 群组不存在，中间件会创建，此时应该允许命令执行（默认启用）
+				return true
+			}
+			// 数据库错误，为了安全起见，禁止命令执行
 			// 注意：这里无法访问 logger，错误会在中间件层记录
-			return err != group.ErrGroupNotFound
+			return false
 		}
 
 		// 群组存在，检查命令是否启用

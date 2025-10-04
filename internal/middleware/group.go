@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"context"
+	"fmt"
 	"telegram-bot/internal/domain/group"
 	"telegram-bot/internal/handler"
 )
@@ -31,8 +33,11 @@ func (m *GroupMiddleware) Middleware() handler.Middleware {
 				return next(ctx)
 			}
 
+			// 创建 context（TODO: 从 handler.Context 传递）
+			reqCtx := context.TODO()
+
 			// 1. 尝试加载群组
-			g, err := m.groupRepo.FindByID(ctx.ChatID)
+			g, err := m.groupRepo.FindByID(reqCtx, ctx.ChatID)
 			if err != nil {
 				// 群组不存在，创建新群组
 				g = group.NewGroup(
@@ -41,16 +46,15 @@ func (m *GroupMiddleware) Middleware() handler.Middleware {
 					ctx.ChatType,
 				)
 
-				if err := m.groupRepo.Save(g); err != nil {
-					// 创建失败，记录错误并注入临时群组对象避免 NPE
+				if err := m.groupRepo.Save(reqCtx, g); err != nil {
+					// 创建失败，记录错误并返回错误，不允许继续执行
 					m.logger.Error("failed_to_create_group",
 						"error", err.Error(),
 						"chat_id", ctx.ChatID,
 						"chat_title", ctx.ChatTitle,
 						"chat_type", ctx.ChatType,
 					)
-					// 注入临时群组对象（内存对象），避免后续 NPE
-					// 群组将拥有默认配置
+					return fmt.Errorf("failed to create group: %w", err)
 				}
 			}
 

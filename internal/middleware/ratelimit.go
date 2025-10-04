@@ -43,18 +43,27 @@ type SimpleRateLimiter struct {
 	tokens   map[int64]int // 用户的令牌数
 	lastTime map[int64]time.Time
 	mu       sync.Mutex
+	stopChan chan struct{} // 停止清理 goroutine
+	stopped  bool          // 是否已停止
 }
 
 // NewSimpleRateLimiter 创建简单限流器
 // rate: 每次请求的最小间隔（如 1 秒）
 // capacity: 令牌桶容量（允许突发请求数）
 func NewSimpleRateLimiter(rate time.Duration, capacity int) *SimpleRateLimiter {
-	return &SimpleRateLimiter{
+	limiter := &SimpleRateLimiter{
 		rate:     rate,
 		capacity: capacity,
 		tokens:   make(map[int64]int),
 		lastTime: make(map[int64]time.Time),
+		stopChan: make(chan struct{}),
 	}
+
+	// 启动自动清理 goroutine
+	// 每小时清理一次超过24小时未活动的用户数据
+	go limiter.autoCleanup(1*time.Hour, 24*time.Hour)
+
+	return limiter
 }
 
 // Allow 检查是否允许请求
@@ -103,5 +112,31 @@ func (l *SimpleRateLimiter) Cleanup(maxAge time.Duration) {
 			delete(l.tokens, userID)
 			delete(l.lastTime, userID)
 		}
+	}
+}
+
+// autoCleanup 自动清理 goroutine
+func (l *SimpleRateLimiter) autoCleanup(interval, maxAge time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			l.Cleanup(maxAge)
+		case <-l.stopChan:
+			return
+		}
+	}
+}
+
+// Stop 停止自动清理 goroutine
+func (l *SimpleRateLimiter) Stop() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if !l.stopped {
+		close(l.stopChan)
+		l.stopped = true
 	}
 }

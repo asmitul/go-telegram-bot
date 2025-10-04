@@ -33,8 +33,15 @@ func (m *RecoveryMiddleware) Middleware() handler.Middleware {
 						"user_id", ctx.UserID,
 					)
 
-					// 转换为 error
-					err = fmt.Errorf("internal error: %v", r)
+					// 转换为 error，保留原始类型信息
+					switch v := r.(type) {
+					case error:
+						// 如果 panic 的值本身就是 error，包装它
+						err = fmt.Errorf("panic recovered: %w", v)
+					default:
+						// 否则创建新的 error
+						err = fmt.Errorf("panic recovered: %v (type: %T)", r, r)
+					}
 
 					// 尝试通知用户
 					ctx.Reply("❌ 服务器内部错误，请稍后再试")

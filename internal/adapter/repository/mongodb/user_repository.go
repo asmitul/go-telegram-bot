@@ -72,8 +72,8 @@ func (r *UserRepository) toDomain(doc *userDocument) *user.User {
 }
 
 // FindByID 根据 ID 查找用户
-func (r *UserRepository) FindByID(id int64) (*user.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *UserRepository) FindByID(ctx context.Context, id int64) (*user.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var doc userDocument
@@ -89,8 +89,8 @@ func (r *UserRepository) FindByID(id int64) (*user.User, error) {
 }
 
 // FindByUsername 根据用户名查找用户
-func (r *UserRepository) FindByUsername(username string) (*user.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*user.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var doc userDocument
@@ -106,8 +106,8 @@ func (r *UserRepository) FindByUsername(username string) (*user.User, error) {
 }
 
 // Save 保存用户
-func (r *UserRepository) Save(u *user.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *UserRepository) Save(ctx context.Context, u *user.User) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	doc := r.toDocument(u)
@@ -116,8 +116,8 @@ func (r *UserRepository) Save(u *user.User) error {
 }
 
 // Update 更新用户
-func (r *UserRepository) Update(u *user.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	doc := r.toDocument(u)
@@ -137,8 +137,8 @@ func (r *UserRepository) Update(u *user.User) error {
 }
 
 // UpdatePermission 更新用户在特定群组的权限（细粒度更新，避免并发冲突）
-func (r *UserRepository) UpdatePermission(userID int64, groupID int64, perm user.Permission) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *UserRepository) UpdatePermission(ctx context.Context, userID int64, groupID int64, perm user.Permission) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	filter := bson.M{"_id": userID}
@@ -162,8 +162,8 @@ func (r *UserRepository) UpdatePermission(userID int64, groupID int64, perm user
 }
 
 // Delete 删除用户
-func (r *UserRepository) Delete(id int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *UserRepository) Delete(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
@@ -171,8 +171,8 @@ func (r *UserRepository) Delete(id int64) error {
 }
 
 // FindAdminsByGroup 查找群组的所有管理员
-func (r *UserRepository) FindAdminsByGroup(groupID int64) ([]*user.User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *UserRepository) FindAdminsByGroup(ctx context.Context, groupID int64) ([]*user.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	// 使用 MongoDB 查询过滤管理员

@@ -20,8 +20,8 @@ func NewAPI(b *bot.Bot) *API {
 }
 
 // BanChatMember 永久封禁群组成员
-func (a *API) BanChatMember(chatID, userID int64) error {
-	_, err := a.bot.BanChatMember(context.Background(), &bot.BanChatMemberParams{
+func (a *API) BanChatMember(ctx context.Context, chatID, userID int64) error {
+	_, err := a.bot.BanChatMember(ctx, &bot.BanChatMemberParams{
 		ChatID: chatID,
 		UserID: userID,
 	})
@@ -29,8 +29,8 @@ func (a *API) BanChatMember(chatID, userID int64) error {
 }
 
 // BanChatMemberWithDuration 临时封禁群组成员
-func (a *API) BanChatMemberWithDuration(chatID, userID int64, until time.Time) error {
-	_, err := a.bot.BanChatMember(context.Background(), &bot.BanChatMemberParams{
+func (a *API) BanChatMemberWithDuration(ctx context.Context, chatID, userID int64, until time.Time) error {
+	_, err := a.bot.BanChatMember(ctx, &bot.BanChatMemberParams{
 		ChatID:    chatID,
 		UserID:    userID,
 		UntilDate: int(until.Unix()),
@@ -39,8 +39,8 @@ func (a *API) BanChatMemberWithDuration(chatID, userID int64, until time.Time) e
 }
 
 // RestrictChatMember 限制群组成员权限（禁言等）
-func (a *API) RestrictChatMember(chatID, userID int64, permissions models.ChatPermissions) error {
-	_, err := a.bot.RestrictChatMember(context.Background(), &bot.RestrictChatMemberParams{
+func (a *API) RestrictChatMember(ctx context.Context, chatID, userID int64, permissions models.ChatPermissions) error {
+	_, err := a.bot.RestrictChatMember(ctx, &bot.RestrictChatMemberParams{
 		ChatID:      chatID,
 		UserID:      userID,
 		Permissions: &permissions,
@@ -49,8 +49,8 @@ func (a *API) RestrictChatMember(chatID, userID int64, permissions models.ChatPe
 }
 
 // RestrictChatMemberWithDuration 限制群组成员权限（禁言等）带时长
-func (a *API) RestrictChatMemberWithDuration(chatID, userID int64, permissions models.ChatPermissions, until time.Time) error {
-	_, err := a.bot.RestrictChatMember(context.Background(), &bot.RestrictChatMemberParams{
+func (a *API) RestrictChatMemberWithDuration(ctx context.Context, chatID, userID int64, permissions models.ChatPermissions, until time.Time) error {
+	_, err := a.bot.RestrictChatMember(ctx, &bot.RestrictChatMemberParams{
 		ChatID:      chatID,
 		UserID:      userID,
 		Permissions: &permissions,
@@ -60,8 +60,8 @@ func (a *API) RestrictChatMemberWithDuration(chatID, userID int64, permissions m
 }
 
 // SendMessage 发送消息
-func (a *API) SendMessage(chatID int64, text string) error {
-	_, err := a.bot.SendMessage(context.Background(), &bot.SendMessageParams{
+func (a *API) SendMessage(ctx context.Context, chatID int64, text string) error {
+	_, err := a.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chatID,
 		Text:   text,
 	})
@@ -69,8 +69,8 @@ func (a *API) SendMessage(chatID int64, text string) error {
 }
 
 // SendMessageWithReply 发送回复消息
-func (a *API) SendMessageWithReply(chatID int64, text string, replyToMessageID int) error {
-	_, err := a.bot.SendMessage(context.Background(), &bot.SendMessageParams{
+func (a *API) SendMessageWithReply(ctx context.Context, chatID int64, text string, replyToMessageID int) error {
+	_, err := a.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chatID,
 		Text:   text,
 		ReplyParameters: &models.ReplyParameters{
@@ -81,8 +81,8 @@ func (a *API) SendMessageWithReply(chatID int64, text string, replyToMessageID i
 }
 
 // DeleteMessage 删除消息
-func (a *API) DeleteMessage(chatID int64, messageID int) error {
-	_, err := a.bot.DeleteMessage(context.Background(), &bot.DeleteMessageParams{
+func (a *API) DeleteMessage(ctx context.Context, chatID int64, messageID int) error {
+	_, err := a.bot.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    chatID,
 		MessageID: messageID,
 	})
@@ -90,8 +90,8 @@ func (a *API) DeleteMessage(chatID int64, messageID int) error {
 }
 
 // GetChatMember 获取群组成员信息
-func (a *API) GetChatMember(chatID, userID int64) (*models.ChatMember, error) {
-	member, err := a.bot.GetChatMember(context.Background(), &bot.GetChatMemberParams{
+func (a *API) GetChatMember(ctx context.Context, chatID, userID int64) (*models.ChatMember, error) {
+	member, err := a.bot.GetChatMember(ctx, &bot.GetChatMemberParams{
 		ChatID: chatID,
 		UserID: userID,
 	})

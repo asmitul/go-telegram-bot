@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"testing"
 
 	"telegram-bot/internal/domain/user"
@@ -70,32 +71,34 @@ func TestFormatUsername(t *testing.T) {
 }
 
 func TestGetTargetUser_FromArgs(t *testing.T) {
+	reqCtx := context.TODO()
 	userRepo := new(MockUserRepository)
 	targetUser := &user.User{
 		ID:       456,
 		Username: "target",
 	}
 
-	userRepo.On("FindByUsername", "target").Return(targetUser, nil).Once()
+	userRepo.On("FindByUsername", reqCtx, "target").Return(targetUser, nil).Once()
 
 	ctx := &handler.Context{
 		Text: "/command @target",
 	}
 
-	result, err := GetTargetUser(ctx, userRepo)
+	result, err := GetTargetUser(reqCtx, ctx, userRepo)
 	assert.NoError(t, err)
 	assert.Equal(t, targetUser, result)
 	userRepo.AssertExpectations(t)
 }
 
 func TestGetTargetUser_FromReply(t *testing.T) {
+	reqCtx := context.TODO()
 	userRepo := new(MockUserRepository)
 	targetUser := &user.User{
 		ID:       456,
 		Username: "target",
 	}
 
-	userRepo.On("FindByID", int64(456)).Return(targetUser, nil).Once()
+	userRepo.On("FindByID", reqCtx, int64(456)).Return(targetUser, nil).Once()
 
 	ctx := &handler.Context{
 		Text: "/command",
@@ -104,20 +107,21 @@ func TestGetTargetUser_FromReply(t *testing.T) {
 		},
 	}
 
-	result, err := GetTargetUser(ctx, userRepo)
+	result, err := GetTargetUser(reqCtx, ctx, userRepo)
 	assert.NoError(t, err)
 	assert.Equal(t, targetUser, result)
 	userRepo.AssertExpectations(t)
 }
 
 func TestGetTargetUser_NoTarget(t *testing.T) {
+	reqCtx := context.TODO()
 	userRepo := new(MockUserRepository)
 
 	ctx := &handler.Context{
 		Text: "/command",
 	}
 
-	result, err := GetTargetUser(ctx, userRepo)
+	result, err := GetTargetUser(reqCtx, ctx, userRepo)
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "未指定目标用户")

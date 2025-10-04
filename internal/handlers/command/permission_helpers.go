@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"telegram-bot/internal/domain/user"
@@ -8,12 +9,12 @@ import (
 )
 
 // GetTargetUser 从参数或回复消息中获取目标用户
-func GetTargetUser(ctx *handler.Context, userRepo UserRepository) (*user.User, error) {
+func GetTargetUser(reqCtx context.Context, ctx *handler.Context, userRepo UserRepository) (*user.User, error) {
 	// 方式 1: 从参数获取 @username
 	args := ParseArgs(ctx.Text)
 	if len(args) > 0 {
 		username := strings.TrimPrefix(args[0], "@")
-		u, err := userRepo.FindByUsername(username)
+		u, err := userRepo.FindByUsername(reqCtx, username)
 		if err != nil {
 			// 包装数据库错误，避免暴露内部细节
 			if err == user.ErrUserNotFound {
@@ -26,7 +27,7 @@ func GetTargetUser(ctx *handler.Context, userRepo UserRepository) (*user.User, e
 
 	// 方式 2: 从回复消息获取
 	if ctx.ReplyTo != nil {
-		u, err := userRepo.FindByID(ctx.ReplyTo.UserID)
+		u, err := userRepo.FindByID(reqCtx, ctx.ReplyTo.UserID)
 		if err != nil {
 			// 包装数据库错误
 			if err == user.ErrUserNotFound {

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"telegram-bot/internal/domain/user"
 	"telegram-bot/internal/handler"
@@ -28,13 +29,15 @@ func NewDemoteHandler(groupRepo GroupRepository, userRepo UserRepository) *Demot
 
 // Handle 处理命令
 func (h *DemoteHandler) Handle(ctx *handler.Context) error {
+	reqCtx := context.TODO()
+
 	// 1. 检查权限
 	if err := h.CheckPermission(ctx); err != nil {
 		return err
 	}
 
 	// 2. 获取目标用户
-	targetUser, err := GetTargetUser(ctx, h.userRepo)
+	targetUser, err := GetTargetUser(reqCtx, ctx, h.userRepo)
 	if err != nil {
 		return ctx.Reply(fmt.Sprintf("❌ %s", err.Error()))
 	}
@@ -64,7 +67,7 @@ func (h *DemoteHandler) Handle(ctx *handler.Context) error {
 	}
 
 	// 6. 保存到数据库（使用细粒度更新避免并发冲突）
-	if err := h.userRepo.UpdatePermission(targetUser.ID, ctx.ChatID, newPerm); err != nil {
+	if err := h.userRepo.UpdatePermission(reqCtx, targetUser.ID, ctx.ChatID, newPerm); err != nil {
 		return ctx.Reply("❌ 权限更新失败，请稍后重试")
 	}
 

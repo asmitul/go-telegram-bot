@@ -67,14 +67,17 @@ func (r *Router) Route(ctx *Context) error {
 
 		// 执行处理器
 		if err := handler(ctx); err != nil {
-			lastErr = err
-
-			// 如果处理器不继续链，立即返回错误
-			// 如果处理器继续链（如监听器），错误已在日志中间件记录
 			if !h.ContinueChain() {
+				// 命令类处理器：错误是用户级的，需要立即返回
+				// 例如：权限不足、参数错误等，这些应该反馈给用户
 				return err
+			} else {
+				// 监听器类处理器：错误是系统级的，记录但不中断
+				// 例如：日志记录失败、统计更新失败等
+				// 这些错误已经在 LoggingMiddleware 中记录
+				// 保存最后一个错误，调用方可以决定如何处理
+				lastErr = err
 			}
-			// 否则继续执行下一个处理器（错误已被记录）
 		}
 
 		// 检查是否继续链
@@ -83,7 +86,8 @@ func (r *Router) Route(ctx *Context) error {
 		}
 	}
 
-	// 如果没有处理器匹配，返回 nil（不是错误）
+	// 返回最后一个监听器的错误（如果有）
+	// 如果没有处理器匹配或所有处理器都成功，返回 nil
 	return lastErr
 }
 

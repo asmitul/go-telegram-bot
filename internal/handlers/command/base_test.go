@@ -8,6 +8,7 @@ import (
 	"telegram-bot/internal/handler"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestBaseCommand_Match(t *testing.T) {
@@ -91,7 +92,7 @@ func TestBaseCommand_Match(t *testing.T) {
 					ID:       tt.ctx.ChatID,
 					Commands: make(map[string]*group.CommandConfig),
 				}
-				groupRepo.On("FindByID", tt.ctx.ChatID).Return(g, nil).Once()
+				groupRepo.On("FindByID", mock.Anything, tt.ctx.ChatID).Return(g, nil).Once()
 			}
 
 			result := base.Match(tt.ctx)

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"context"
+	"fmt"
 	"telegram-bot/internal/domain/user"
 	"telegram-bot/internal/handler"
 )
@@ -26,8 +28,11 @@ func NewPermissionMiddleware(userRepo user.Repository, ownerIDs []int64, logger 
 func (m *PermissionMiddleware) Middleware() handler.Middleware {
 	return func(next handler.HandlerFunc) handler.HandlerFunc {
 		return func(ctx *handler.Context) error {
+			// 创建 context（TODO: 从 handler.Context 传递）
+			reqCtx := context.TODO()
+
 			// 1. 加载用户
-			u, err := m.userRepo.FindByID(ctx.UserID)
+			u, err := m.userRepo.FindByID(reqCtx, ctx.UserID)
 			if err != nil {
 				// 用户不存在，创建新用户（默认权限为普通用户）
 				u = user.NewUser(
@@ -44,15 +49,14 @@ func (m *PermissionMiddleware) Middleware() handler.Middleware {
 					u.SetPermission(0, user.PermissionOwner)
 				}
 
-				if err := m.userRepo.Save(u); err != nil {
-					// 创建失败，记录错误并注入默认用户避免 NPE
+				if err := m.userRepo.Save(reqCtx, u); err != nil {
+					// 创建失败，记录错误并返回错误，不允许继续执行
 					m.logger.Error("failed_to_create_user",
 						"error", err.Error(),
 						"user_id", ctx.UserID,
 						"username", ctx.Username,
 					)
-					// 注入默认用户（内存对象），避免后续 NPE
-					// 用户将拥有默认权限（PermissionUser）
+					return fmt.Errorf("failed to create user: %w", err)
 				}
 			} else {
 				// 用户已存在，检查是否需要升级为Owner
@@ -60,7 +64,7 @@ func (m *PermissionMiddleware) Middleware() handler.Middleware {
 					currentPerm := u.GetPermission(0)
 					if currentPerm < user.PermissionOwner {
 						// 使用细粒度更新避免并发冲突
-						if err := m.userRepo.UpdatePermission(ctx.UserID, 0, user.PermissionOwner); err != nil {
+						if err := m.userRepo.UpdatePermission(reqCtx, ctx.UserID, 0, user.PermissionOwner); err != nil {
 							// 更新失败，记录错误但继续执行
 							m.logger.Warn("failed_to_upgrade_owner_permission",
 								"error", err.Error(),

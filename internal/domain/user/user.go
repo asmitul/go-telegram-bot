@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -109,11 +110,11 @@ func (u *User) IsAdmin(groupID int64) bool {
 
 // Repository 用户仓储接口
 type Repository interface {
-	FindByID(id int64) (*User, error)
-	FindByUsername(username string) (*User, error)
-	Save(user *User) error
-	Update(user *User) error
-	UpdatePermission(userID int64, groupID int64, perm Permission) error // 细粒度权限更新，避免并发冲突
-	Delete(id int64) error
-	FindAdminsByGroup(groupID int64) ([]*User, error)
+	FindByID(ctx context.Context, id int64) (*User, error)
+	FindByUsername(ctx context.Context, username string) (*User, error)
+	Save(ctx context.Context, user *User) error
+	Update(ctx context.Context, user *User) error
+	UpdatePermission(ctx context.Context, userID int64, groupID int64, perm Permission) error // 细粒度权限更新，避免并发冲突
+	Delete(ctx context.Context, id int64) error
+	FindAdminsByGroup(ctx context.Context, groupID int64) ([]*User, error)
 }

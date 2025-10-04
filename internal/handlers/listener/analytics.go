@@ -9,8 +9,11 @@ import (
 // AnalyticsHandler 数据分析处理器
 // 统计消息数量、活跃用户等信息
 type AnalyticsHandler struct {
-	stats *Stats
-	mu    sync.RWMutex
+	stats            *Stats
+	mu               sync.RWMutex
+	lastCleanup      time.Time    // 上次清理时间
+	cleanupThreshold int64        // 清理阈值（消息数）
+	cleanupInterval  time.Duration // 最小清理间隔
 }
 
 // Stats 统计数据
@@ -31,6 +34,9 @@ func NewAnalyticsHandler() *AnalyticsHandler {
 			MessagesByHour: make(map[int]int64),
 			LastUpdated:    time.Now(),
 		},
+		lastCleanup:      time.Now(),
+		cleanupThreshold: 1000,         // 每1000条消息检查一次
+		cleanupInterval:  10 * time.Minute, // 最少间隔10分钟
 	}
 }
 
@@ -61,9 +67,12 @@ func (h *AnalyticsHandler) Handle(ctx *handler.Context) error {
 
 	h.stats.LastUpdated = now
 
-	// 定期清理（每1000条消息清理一次）
-	if h.stats.TotalMessages%1000 == 0 {
+	// 定期清理（每1000条消息且距离上次清理超过10分钟）
+	// 避免在高并发场景下频繁清理
+	if h.stats.TotalMessages%h.cleanupThreshold == 0 &&
+	   now.Sub(h.lastCleanup) >= h.cleanupInterval {
 		h.cleanupOldUsers(now)
+		h.lastCleanup = now
 	}
 
 	return nil

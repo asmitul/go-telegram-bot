@@ -1,6 +1,7 @@
 package group
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -111,9 +112,9 @@ func (g *Group) GetSetting(key string) (interface{}, bool) {
 
 // Repository 群组仓储接口
 type Repository interface {
-	FindByID(id int64) (*Group, error)
-	Save(group *Group) error
-	Update(group *Group) error
-	Delete(id int64) error
-	FindAll() ([]*Group, error)
+	FindByID(ctx context.Context, id int64) (*Group, error)
+	Save(ctx context.Context, group *Group) error
+	Update(ctx context.Context, group *Group) error
+	Delete(ctx context.Context, id int64) error
+	FindAll(ctx context.Context) ([]*Group, error)
 }
