@@ -25,6 +25,11 @@ func (m *MockGroupRepository) FindByID(ctx context.Context, id int64) (*group.Gr
 	return args.Get(0).(*group.Group), args.Error(1)
 }
 
+func (m *MockGroupRepository) Update(ctx context.Context, g *group.Group) error {
+	args := m.Called(ctx, g)
+	return args.Error(0)
+}
+
 // MockUserRepository is a mock for UserRepository
 type MockUserRepository struct {
 	mock.Mock

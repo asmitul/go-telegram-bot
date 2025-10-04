@@ -271,19 +271,23 @@ func registerHandlers(
 	router.Register(command.NewListAdminsHandler(groupRepo, userRepo))
 	router.Register(command.NewMyPermHandler(groupRepo))
 
+	// 功能管理命令
+	router.Register(command.NewToggleCalcHandler(groupRepo, userRepo))
+
 	// 2. 关键词处理器（优先级 200）
 	router.Register(keyword.NewGreetingHandler())
 
 	// 3. 正则处理器（优先级 300）
 	router.Register(pattern.NewWeatherHandler())
+	router.Register(pattern.NewCalculatorHandler(groupRepo))
 
 	// 4. 监听器（优先级 900+）
 	router.Register(listener.NewMessageLoggerHandler(appLogger))
 
 	appLogger.Info("Registered handlers breakdown",
-		"commands", 8,
+		"commands", 9,
 		"keywords", 1,
-		"patterns", 1,
+		"patterns", 2,
 		"listeners", 1,
 	)
 }

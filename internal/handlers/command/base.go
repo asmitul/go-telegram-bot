@@ -11,6 +11,7 @@ import (
 // GroupRepository 群组仓储接口（简化版）
 type GroupRepository interface {
 	FindByID(ctx context.Context, id int64) (*group.Group, error)
+	Update(ctx context.Context, g *group.Group) error
 }
 
 // UserRepository 用户仓储接口（简化版）

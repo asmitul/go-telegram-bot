@@ -110,6 +110,30 @@ func (g *Group) GetSetting(key string) (interface{}, bool) {
 	return value, ok
 }
 
+// IsFeatureEnabled 检查功能是否启用
+// 如果功能未配置，默认返回 true（默认启用）
+func (g *Group) IsFeatureEnabled(featureName string) bool {
+	if val, ok := g.Settings[featureName]; ok {
+		if enabled, ok := val.(bool); ok {
+			return enabled
+		}
+	}
+	// 默认启用所有功能
+	return true
+}
+
+// EnableFeature 启用功能
+func (g *Group) EnableFeature(featureName string) {
+	g.Settings[featureName] = true
+	g.UpdatedAt = time.Now()
+}
+
+// DisableFeature 禁用功能
+func (g *Group) DisableFeature(featureName string) {
+	g.Settings[featureName] = false
+	g.UpdatedAt = time.Now()
+}
+
 // Repository 群组仓储接口
 type Repository interface {
 	FindByID(ctx context.Context, id int64) (*Group, error)
