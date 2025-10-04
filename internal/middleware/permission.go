@@ -10,13 +10,15 @@ import (
 type PermissionMiddleware struct {
 	userRepo user.Repository
 	ownerIDs []int64 // 配置的Owner用户ID列表
+	logger   Logger  // 用于记录错误
 }
 
 // NewPermissionMiddleware 创建权限中间件
-func NewPermissionMiddleware(userRepo user.Repository, ownerIDs []int64) *PermissionMiddleware {
+func NewPermissionMiddleware(userRepo user.Repository, ownerIDs []int64, logger Logger) *PermissionMiddleware {
 	return &PermissionMiddleware{
 		userRepo: userRepo,
 		ownerIDs: ownerIDs,
+		logger:   logger,
 	}
 }
 
@@ -43,19 +45,31 @@ func (m *PermissionMiddleware) Middleware() handler.Middleware {
 				}
 
 				if err := m.userRepo.Save(u); err != nil {
-					// 创建失败，继续执行但不注入用户
-					return next(ctx)
+					// 创建失败，记录错误并注入默认用户避免 NPE
+					m.logger.Error("failed_to_create_user",
+						"error", err.Error(),
+						"user_id", ctx.UserID,
+						"username", ctx.Username,
+					)
+					// 注入默认用户（内存对象），避免后续 NPE
+					// 用户将拥有默认权限（PermissionUser）
 				}
 			} else {
 				// 用户已存在，检查是否需要升级为Owner
 				if m.isConfiguredOwner(ctx.UserID) {
 					currentPerm := u.GetPermission(0)
 					if currentPerm < user.PermissionOwner {
-						// 设置全局Owner权限（groupID = 0）
-						u.SetPermission(0, user.PermissionOwner)
-						// 更新到数据库
-						if err := m.userRepo.Update(u); err != nil {
-							// 更新失败，继续执行
+						// 使用细粒度更新避免并发冲突
+						if err := m.userRepo.UpdatePermission(ctx.UserID, 0, user.PermissionOwner); err != nil {
+							// 更新失败，记录错误但继续执行
+							m.logger.Warn("failed_to_upgrade_owner_permission",
+								"error", err.Error(),
+								"user_id", ctx.UserID,
+								"username", ctx.Username,
+							)
+						} else {
+							// 更新本地对象（用于后续使用）
+							u.SetPermission(0, user.PermissionOwner)
 						}
 					}
 				}

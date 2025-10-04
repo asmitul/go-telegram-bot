@@ -61,7 +61,23 @@ func (h *AnalyticsHandler) Handle(ctx *handler.Context) error {
 
 	h.stats.LastUpdated = now
 
+	// 定期清理（每1000条消息清理一次）
+	if h.stats.TotalMessages%1000 == 0 {
+		h.cleanupOldUsers(now)
+	}
+
 	return nil
+}
+
+// cleanupOldUsers 清理超过 30 天未活跃的用户（内部方法，调用前需加锁）
+func (h *AnalyticsHandler) cleanupOldUsers(now time.Time) {
+	cutoff := now.Add(-30 * 24 * time.Hour) // 30天
+
+	for userID, lastSeen := range h.stats.ActiveUsers {
+		if lastSeen.Before(cutoff) {
+			delete(h.stats.ActiveUsers, userID)
+		}
+	}
 }
 
 // Priority 优先级

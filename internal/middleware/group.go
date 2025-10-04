@@ -10,12 +10,14 @@ import (
 // 如果群组不存在，自动创建
 type GroupMiddleware struct {
 	groupRepo group.Repository
+	logger    Logger // 用于记录错误
 }
 
 // NewGroupMiddleware 创建群组中间件
-func NewGroupMiddleware(groupRepo group.Repository) *GroupMiddleware {
+func NewGroupMiddleware(groupRepo group.Repository, logger Logger) *GroupMiddleware {
 	return &GroupMiddleware{
 		groupRepo: groupRepo,
+		logger:    logger,
 	}
 }
 
@@ -40,9 +42,15 @@ func (m *GroupMiddleware) Middleware() handler.Middleware {
 				)
 
 				if err := m.groupRepo.Save(g); err != nil {
-					// 创建失败，继续执行但不注入群组
-					// 这样命令可以自己处理群组不存在的情况
-					return next(ctx)
+					// 创建失败，记录错误并注入临时群组对象避免 NPE
+					m.logger.Error("failed_to_create_group",
+						"error", err.Error(),
+						"chat_id", ctx.ChatID,
+						"chat_title", ctx.ChatTitle,
+						"chat_type", ctx.ChatType,
+					)
+					// 注入临时群组对象（内存对象），避免后续 NPE
+					// 群组将拥有默认配置
 				}
 			}
 
