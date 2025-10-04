@@ -279,12 +279,11 @@ func registerHandlers(
 
 	// 4. 监听器（优先级 900+）
 	router.Register(listener.NewMessageLoggerHandler(appLogger))
-	router.Register(listener.NewAnalyticsHandler())
 
 	appLogger.Info("Registered handlers breakdown",
 		"commands", 8,
 		"keywords", 1,
 		"patterns", 1,
-		"listeners", 2,
+		"listeners", 1,
 	)
 }

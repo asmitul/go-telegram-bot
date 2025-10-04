@@ -26,19 +26,17 @@ func TestHandlerRouting(t *testing.T) {
 	// 注册处理器
 	router.Register(command.NewPingHandler(mockGroupRepo))
 	router.Register(keyword.NewGreetingHandler())
-	router.Register(listener.NewAnalyticsHandler())
 
 	// 验证处理器数量
-	assert.Equal(t, 3, router.Count())
+	assert.Equal(t, 2, router.Count())
 
 	// 获取所有处理器
 	handlers := router.GetHandlers()
-	assert.Len(t, handlers, 3)
+	assert.Len(t, handlers, 2)
 
 	// 验证优先级排序
 	assert.Equal(t, 100, handlers[0].Priority()) // 命令
 	assert.Equal(t, 200, handlers[1].Priority()) // 关键词
-	assert.Equal(t, 950, handlers[2].Priority()) // 监听器
 }
 
 // MockGroupRepo 模拟群组仓储
