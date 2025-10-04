@@ -141,33 +141,29 @@ func (r *UserRepository) FindAdminsByGroup(groupID int64) ([]*user.User, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 
-	// 查找 permissions 字段中包含该 groupID 且权限 >= Admin 的用户
-	filter := bson.M{
-		"$expr": bson.M{
-			"$gte": []interface{}{
-				bson.M{"$getField": bson.M{
-					"field": groupID,
-					"input": "$permissions",
-				}},
-				int(user.PermissionAdmin),
-			},
-		},
-	}
-
-	cursor, err := r.collection.Find(ctx, filter)
+	// 获取所有用户，然后在应用层过滤
+	// 这比使用复杂的 MongoDB 查询更简单可靠
+	cursor, err := r.collection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var users []*user.User
+	var admins []*user.User
 	for cursor.Next(ctx) {
 		var doc userDocument
 		if err := cursor.Decode(&doc); err != nil {
 			return nil, err
 		}
-		users = append(users, r.toDomain(&doc))
+
+		// 转换为领域对象
+		u := r.toDomain(&doc)
+
+		// 检查该用户在指定群组中是否有管理员权限
+		if u.GetPermission(groupID) >= user.PermissionAdmin {
+			admins = append(admins, u)
+		}
 	}
 
-	return users, cursor.Err()
+	return admins, cursor.Err()
 }
