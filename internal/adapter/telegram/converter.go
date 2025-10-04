@@ -18,6 +18,11 @@ func ConvertUpdate(ctx context.Context, b *bot.Bot, update *models.Update) *hand
 
 	msg := update.Message
 
+	// 某些消息（如频道消息）可能没有 From 字段，跳过处理
+	if msg.From == nil {
+		return nil
+	}
+
 	// 构建 handler.Context
 	handlerCtx := &handler.Context{
 		Ctx:     ctx,
@@ -42,7 +47,7 @@ func ConvertUpdate(ctx context.Context, b *bot.Bot, update *models.Update) *hand
 	}
 
 	// 处理回复消息
-	if msg.ReplyToMessage != nil {
+	if msg.ReplyToMessage != nil && msg.ReplyToMessage.From != nil {
 		handlerCtx.ReplyTo = &handler.ReplyInfo{
 			MessageID: msg.ReplyToMessage.ID,
 			UserID:    msg.ReplyToMessage.From.ID,

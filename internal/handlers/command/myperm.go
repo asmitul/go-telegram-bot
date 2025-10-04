@@ -27,10 +27,16 @@ func NewMyPermHandler(groupRepo GroupRepository) *MyPermHandler {
 
 // Handle 处理命令
 func (h *MyPermHandler) Handle(ctx *handler.Context) error {
-	// 获取当前群组/私聊的 ID
+	// 1. 检查权限
+	if err := h.CheckPermission(ctx); err != nil {
+		return err
+	}
+
+	// 2. 获取当前群组/私聊的权限
+	// 私聊使用全局权限（groupID = 0），群组使用群组 ID
 	groupID := ctx.ChatID
 	if ctx.IsPrivate() {
-		groupID = ctx.UserID
+		groupID = 0 // 全局权限
 	}
 
 	perm := ctx.User.GetPermission(groupID)

@@ -47,6 +47,8 @@ func (r *Router) Route(ctx *Context) error {
 	handlers := r.handlers
 	r.mu.RUnlock()
 
+	var lastErr error
+
 	// 遍历所有处理器，执行匹配的
 	for _, h := range handlers {
 		// 匹配检查
@@ -59,7 +61,14 @@ func (r *Router) Route(ctx *Context) error {
 
 		// 执行处理器
 		if err := handler(ctx); err != nil {
-			return err
+			lastErr = err
+
+			// 如果处理器不继续链，立即返回错误
+			// 如果处理器继续链（如监听器），记录错误但继续执行
+			if !h.ContinueChain() {
+				return err
+			}
+			// 否则继续执行下一个处理器
 		}
 
 		// 检查是否继续链
@@ -68,7 +77,7 @@ func (r *Router) Route(ctx *Context) error {
 		}
 	}
 
-	return nil
+	return lastErr
 }
 
 // buildChain 构建中间件链

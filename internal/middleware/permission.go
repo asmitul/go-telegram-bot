@@ -37,13 +37,9 @@ func (m *PermissionMiddleware) Middleware() handler.Middleware {
 
 				// 检查是否为配置的Owner
 				if m.isConfiguredOwner(ctx.UserID) {
-					// 设置为Owner权限（在所有群组/私聊中都有Owner权限）
-					// 使用ChatID作为权限的groupID
-					groupID := ctx.ChatID
-					if ctx.IsPrivate() {
-						groupID = ctx.UserID
-					}
-					u.SetPermission(groupID, user.PermissionOwner)
+					// 设置为全局Owner权限（groupID = 0 表示全局）
+					// 这样Owner在所有群组/私聊中都有Owner权限
+					u.SetPermission(0, user.PermissionOwner)
 				}
 
 				if err := m.userRepo.Save(u); err != nil {
@@ -53,14 +49,10 @@ func (m *PermissionMiddleware) Middleware() handler.Middleware {
 			} else {
 				// 用户已存在，检查是否需要升级为Owner
 				if m.isConfiguredOwner(ctx.UserID) {
-					groupID := ctx.ChatID
-					if ctx.IsPrivate() {
-						groupID = ctx.UserID
-					}
-
-					currentPerm := u.GetPermission(groupID)
+					currentPerm := u.GetPermission(0)
 					if currentPerm < user.PermissionOwner {
-						u.SetPermission(groupID, user.PermissionOwner)
+						// 设置全局Owner权限（groupID = 0）
+						u.SetPermission(0, user.PermissionOwner)
 						// 更新到数据库
 						if err := m.userRepo.Update(u); err != nil {
 							// 更新失败，继续执行

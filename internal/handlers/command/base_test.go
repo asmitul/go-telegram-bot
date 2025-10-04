@@ -208,8 +208,9 @@ func TestBaseCommand_CheckPermission(t *testing.T) {
 				ChatType: "private",
 				UserID:   123,
 				User: &user.User{
-					ID:          123,
-					Permissions: map[int64]user.Permission{123: tt.userPerm},
+					ID: 123,
+					// 私聊使用全局权限（groupID = 0）
+					Permissions: map[int64]user.Permission{0: tt.userPerm},
 				},
 			}
 

@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"fmt"
 	"telegram-bot/internal/domain/user"
 	"time"
 
@@ -141,9 +142,16 @@ func (r *UserRepository) FindAdminsByGroup(groupID int64) ([]*user.User, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 
-	// 获取所有用户，然后在应用层过滤
-	// 这比使用复杂的 MongoDB 查询更简单可靠
-	cursor, err := r.collection.Find(ctx, bson.M{})
+	// 使用 MongoDB 查询过滤管理员
+	// 查询条件：permissions.{groupID} >= PermissionAdmin 或 permissions.0 >= PermissionAdmin（全局权限）
+	filter := bson.M{
+		"$or": []bson.M{
+			{fmt.Sprintf("permissions.%d", groupID): bson.M{"$gte": int(user.PermissionAdmin)}},
+			{"permissions.0": bson.M{"$gte": int(user.PermissionAdmin)}}, // 全局权限
+		},
+	}
+
+	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -158,11 +166,7 @@ func (r *UserRepository) FindAdminsByGroup(groupID int64) ([]*user.User, error) 
 
 		// 转换为领域对象
 		u := r.toDomain(&doc)
-
-		// 检查该用户在指定群组中是否有管理员权限
-		if u.GetPermission(groupID) >= user.PermissionAdmin {
-			admins = append(admins, u)
-		}
+		admins = append(admins, u)
 	}
 
 	return admins, cursor.Err()

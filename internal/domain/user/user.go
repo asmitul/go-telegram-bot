@@ -55,9 +55,16 @@ func NewUser(id int64, username, firstName, lastName string) *User {
 
 // GetPermission 获取用户在特定群组的权限
 func (u *User) GetPermission(groupID int64) Permission {
+	// 先检查全局权限（groupID = 0）
+	if perm, ok := u.Permissions[0]; ok {
+		return perm
+	}
+
+	// 再检查群组特定权限
 	if perm, ok := u.Permissions[groupID]; ok {
 		return perm
 	}
+
 	return PermissionUser
 }
 

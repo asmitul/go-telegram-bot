@@ -29,13 +29,18 @@ func NewListAdminsHandler(groupRepo GroupRepository, userRepo UserRepository) *L
 
 // Handle 处理命令
 func (h *ListAdminsHandler) Handle(ctx *handler.Context) error {
-	// 1. 查询所有管理员
+	// 1. 检查权限
+	if err := h.CheckPermission(ctx); err != nil {
+		return err
+	}
+
+	// 2. 查询所有管理员
 	admins, err := h.userRepo.FindAdminsByGroup(ctx.ChatID)
 	if err != nil {
 		return ctx.Reply("❌ 查询管理员列表失败，请稍后重试")
 	}
 
-	// 2. 按权限等级分组
+	// 3. 按权限等级分组
 	owners := []string{}
 	superAdmins := []string{}
 	regularAdmins := []string{}
@@ -54,7 +59,7 @@ func (h *ListAdminsHandler) Handle(ctx *handler.Context) error {
 		}
 	}
 
-	// 3. 构建输出
+	// 4. 构建输出
 	var sb strings.Builder
 	sb.WriteString("👥 <b>当前群组管理员列表</b>\n\n")
 

@@ -167,10 +167,10 @@ func (c *Context) HasPermission(required user.Permission) bool {
 		return false
 	}
 
-	// 如果是私聊，使用 UserID 作为 GroupID（因为权限是按群组的）
+	// 私聊使用全局权限（groupID = 0），群组使用群组 ID
 	groupID := c.ChatID
 	if c.IsPrivate() {
-		groupID = c.UserID
+		groupID = 0 // 全局权限
 	}
 
 	return c.User.HasPermission(groupID, required)
@@ -183,7 +183,7 @@ func (c *Context) RequirePermission(required user.Permission) error {
 		if c.User != nil {
 			groupID := c.ChatID
 			if c.IsPrivate() {
-				groupID = c.UserID
+				groupID = 0 // 全局权限
 			}
 			currentPerm = c.User.GetPermission(groupID)
 		}
