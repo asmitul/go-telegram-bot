@@ -44,9 +44,7 @@
 ### 架构层次
 
 ```
-Controller/Handler
-    ↓
-Service/UseCase
+Handler
     ↓
 Repository Interface (Domain Layer)
     ↓
@@ -934,7 +932,7 @@ for cursor.Next(ctx) { /* ... */ }
 
 **不应该**。Repository 只负责数据访问，业务逻辑应该在：
 - **领域模型**：`user.HasPermission()`
-- **Service/UseCase 层**：复杂的业务流程
+- **Handler 层**：复杂的业务流程
 
 ```go
 // ✅ 好：Repository 只做数据访问
