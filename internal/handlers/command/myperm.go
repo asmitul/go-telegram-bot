@@ -36,21 +36,21 @@ func (h *MyPermHandler) Handle(ctx *handler.Context) error {
 	perm := ctx.User.GetPermission(groupID)
 
 	var sb strings.Builder
-	sb.WriteString("👤 您的权限信息:\n\n")
+	sb.WriteString("👤 <b>您的权限信息</b>\n\n")
 
 	// 群组/私聊名称
 	if ctx.IsPrivate() {
-		sb.WriteString("环境: 私聊\n")
+		sb.WriteString("环境: <i>私聊</i>\n")
 	} else {
-		sb.WriteString(fmt.Sprintf("群组: %s\n", ctx.ChatTitle))
+		sb.WriteString(fmt.Sprintf("群组: <b>%s</b>\n", ctx.ChatTitle))
 	}
 
 	// 用户信息
-	sb.WriteString(fmt.Sprintf("用户: %s\n", FormatUsername(ctx.User)))
-	sb.WriteString(fmt.Sprintf("权限等级: %s %s\n\n", perm.String(), GetPermIcon(perm)))
+	sb.WriteString(fmt.Sprintf("用户: <b>%s</b>\n", FormatUsername(ctx.User)))
+	sb.WriteString(fmt.Sprintf("权限等级: <b>%s</b> %s\n\n", perm.String(), GetPermIcon(perm)))
 
 	// 权限说明
-	sb.WriteString("您可以:\n")
+	sb.WriteString("<b>您可以:</b>\n")
 
 	switch perm {
 	case user.PermissionOwner:
@@ -75,5 +75,5 @@ func (h *MyPermHandler) Handle(ctx *handler.Context) error {
 		sb.WriteString("⚠️ 无权限\n")
 	}
 
-	return ctx.Reply(sb.String())
+	return ctx.ReplyHTML(sb.String())
 }

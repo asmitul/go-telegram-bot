@@ -56,10 +56,10 @@ func (h *ListAdminsHandler) Handle(ctx *handler.Context) error {
 
 	// 3. 构建输出
 	var sb strings.Builder
-	sb.WriteString("👥 当前群组管理员列表:\n\n")
+	sb.WriteString("👥 <b>当前群组管理员列表</b>\n\n")
 
 	if len(owners) > 0 {
-		sb.WriteString(fmt.Sprintf("👑 Owner (%d人):\n", len(owners)))
+		sb.WriteString(fmt.Sprintf("👑 <b>Owner</b> (%d人):\n", len(owners)))
 		for _, u := range owners {
 			sb.WriteString(fmt.Sprintf("  • %s\n", u))
 		}
@@ -67,7 +67,7 @@ func (h *ListAdminsHandler) Handle(ctx *handler.Context) error {
 	}
 
 	if len(superAdmins) > 0 {
-		sb.WriteString(fmt.Sprintf("⭐ SuperAdmin (%d人):\n", len(superAdmins)))
+		sb.WriteString(fmt.Sprintf("⭐ <b>SuperAdmin</b> (%d人):\n", len(superAdmins)))
 		for _, u := range superAdmins {
 			sb.WriteString(fmt.Sprintf("  • %s\n", u))
 		}
@@ -75,7 +75,7 @@ func (h *ListAdminsHandler) Handle(ctx *handler.Context) error {
 	}
 
 	if len(regularAdmins) > 0 {
-		sb.WriteString(fmt.Sprintf("🛡 Admin (%d人):\n", len(regularAdmins)))
+		sb.WriteString(fmt.Sprintf("🛡 <b>Admin</b> (%d人):\n", len(regularAdmins)))
 		for _, u := range regularAdmins {
 			sb.WriteString(fmt.Sprintf("  • %s\n", u))
 		}
@@ -87,7 +87,7 @@ func (h *ListAdminsHandler) Handle(ctx *handler.Context) error {
 		return ctx.Reply("👥 当前群组暂无管理员")
 	}
 
-	sb.WriteString(fmt.Sprintf("总计: %d 位管理员", total))
+	sb.WriteString(fmt.Sprintf("总计: <b>%d</b> 位管理员", total))
 
-	return ctx.Reply(sb.String())
+	return ctx.ReplyHTML(sb.String())
 }

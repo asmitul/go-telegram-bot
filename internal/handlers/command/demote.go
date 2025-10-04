@@ -45,7 +45,7 @@ func (h *DemoteHandler) Handle(ctx *handler.Context) error {
 	// 4. 权限保护：不能降低比自己高或相等的用户
 	executorPerm := ctx.User.GetPermission(ctx.ChatID)
 	if currentPerm >= executorPerm {
-		return ctx.Reply(fmt.Sprintf("❌ 您无权降低 %s 的权限（目标权限: %s，您的权限: %s）",
+		return ctx.ReplyHTML(fmt.Sprintf("❌ 您无权降低 <b>%s</b> 的权限\n目标权限: <b>%s</b>，您的权限: <b>%s</b>",
 			FormatUsername(targetUser),
 			currentPerm.String(),
 			executorPerm.String()))
@@ -54,7 +54,7 @@ func (h *DemoteHandler) Handle(ctx *handler.Context) error {
 	// 5. 计算新权限
 	newPerm := currentPerm - 1
 	if newPerm < user.PermissionUser {
-		return ctx.Reply(fmt.Sprintf("❌ 用户 %s 已是最低权限 %s",
+		return ctx.ReplyHTML(fmt.Sprintf("❌ 用户 <b>%s</b> 已是最低权限 <b>%s</b>",
 			FormatUsername(targetUser), currentPerm.String()))
 	}
 
@@ -67,7 +67,7 @@ func (h *DemoteHandler) Handle(ctx *handler.Context) error {
 	}
 
 	// 8. 成功反馈
-	return ctx.Reply(fmt.Sprintf("✅ 用户 %s 权限已降低: %s → %s %s",
+	return ctx.ReplyHTML(fmt.Sprintf("✅ 用户 <b>%s</b> 权限已降低:\n<b>%s</b> → <b>%s</b> %s",
 		FormatUsername(targetUser),
 		currentPerm.String(),
 		newPerm.String(),

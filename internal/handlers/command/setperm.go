@@ -77,13 +77,13 @@ func (h *SetPermHandler) Handle(ctx *handler.Context) error {
 
 	// 8. 成功反馈
 	if currentPerm == newPerm {
-		return ctx.Reply(fmt.Sprintf("✅ 用户 %s 权限保持不变: %s %s",
+		return ctx.ReplyHTML(fmt.Sprintf("✅ 用户 <b>%s</b> 权限保持不变:\n<b>%s</b> %s",
 			FormatUsername(targetUser),
 			newPerm.String(),
 			GetPermIcon(newPerm)))
 	}
 
-	return ctx.Reply(fmt.Sprintf("✅ 用户 %s 权限已设置: %s → %s %s",
+	return ctx.ReplyHTML(fmt.Sprintf("✅ 用户 <b>%s</b> 权限已设置:\n<b>%s</b> → <b>%s</b> %s",
 		FormatUsername(targetUser),
 		currentPerm.String(),
 		newPerm.String(),

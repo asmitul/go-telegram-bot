@@ -45,13 +45,13 @@ func (h *PromoteHandler) Handle(ctx *handler.Context) error {
 	// 4. 计算新权限
 	newPerm := currentPerm + 1
 	if newPerm > user.PermissionOwner {
-		return ctx.Reply(fmt.Sprintf("❌ 用户 %s 已是最高权限 %s",
+		return ctx.ReplyHTML(fmt.Sprintf("❌ 用户 <b>%s</b> 已是最高权限 <b>%s</b>",
 			FormatUsername(targetUser), currentPerm.String()))
 	}
 
 	// 5. 权限保护：不能提升到比自己高的等级
 	if !ctx.User.HasPermission(ctx.ChatID, newPerm) {
-		return ctx.Reply(fmt.Sprintf("❌ 您无权提升用户到 %s 等级（您的权限: %s）",
+		return ctx.ReplyHTML(fmt.Sprintf("❌ 您无权提升用户到 <b>%s</b> 等级（您的权限: <b>%s</b>）",
 			newPerm.String(), ctx.User.GetPermission(ctx.ChatID).String()))
 	}
 
@@ -64,7 +64,7 @@ func (h *PromoteHandler) Handle(ctx *handler.Context) error {
 	}
 
 	// 8. 成功反馈
-	return ctx.Reply(fmt.Sprintf("✅ 用户 %s 权限已提升: %s → %s %s",
+	return ctx.ReplyHTML(fmt.Sprintf("✅ 用户 <b>%s</b> 权限已提升:\n<b>%s</b> → <b>%s</b> %s",
 		FormatUsername(targetUser),
 		currentPerm.String(),
 		newPerm.String(),
