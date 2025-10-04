@@ -903,14 +903,12 @@ func (h *WhoamiHandler) Handle(ctx *handler.Context) error {
             "🆔 ID: `%d`\n"+
             "👤 用户名: @%s\n"+
             "📝 昵称: %s %s\n"+
-            "🔒 权限: %s\n"+
-            "🌐 语言: %s",
+            "🔒 权限: %s",
         ctx.UserID,
         ctx.Username,
         ctx.FirstName,
         ctx.LastName,
         permissionName,
-        ctx.LanguageCode,
     )
 
     return ctx.ReplyMarkdown(response)
@@ -1277,16 +1275,11 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
         return err
     }
 
-    var response string
-
-    switch ctx.LanguageCode {
-    case "zh", "zh-CN", "zh-TW":
-        response = "📖 帮助信息\n\n可用命令：..."
-    case "en":
-        response = "📖 Help\n\nAvailable commands:..."
-    default:
-        response = "📖 Help / 帮助\n\n..."
-    }
+    // 提供多语言支持（可以基于用户设置或群组配置）
+    response := "📖 帮助信息 / Help\n\n" +
+        "可用命令 / Available commands:\n" +
+        "/ping - 测试连接\n" +
+        "/help - 帮助信息"
 
     return ctx.Reply(response)
 }

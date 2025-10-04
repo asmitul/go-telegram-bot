@@ -657,11 +657,15 @@ func NewI18nMiddleware(defaultLang string) *I18nMiddleware {
 func (m *I18nMiddleware) Middleware() handler.Middleware {
 	return func(next handler.HandlerFunc) handler.HandlerFunc {
 		return func(ctx *handler.Context) error {
-			// 设置语言（优先使用用户语言，否则使用默认语言）
-			lang := ctx.LanguageCode
-			if lang == "" {
-				lang = m.defaultLang
-			}
+			// 设置语言（可以从群组配置或用户配置中读取）
+			lang := m.defaultLang
+
+			// 示例：从用户配置中读取语言偏好
+			// if ctx.User != nil {
+			//     if userLang, ok := ctx.User.Settings["language"]; ok {
+			//         lang = userLang.(string)
+			//     }
+			// }
 
 			ctx.Set("lang", lang)
 

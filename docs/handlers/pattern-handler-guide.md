@@ -583,8 +583,8 @@ func NewHelpPatternHandler() *HelpPatternHandler {
 }
 
 func (h *HelpPatternHandler) Handle(ctx *handler.Context) error {
-    // 根据语言返回不同帮助
-    if ctx.LanguageCode == "zh" {
+    // 根据消息内容判断语言（匹配中文则用中文回复）
+    if strings.Contains(ctx.Text, "帮助") || strings.Contains(ctx.Text, "？") {
         return ctx.Reply("请输入 /help 查看帮助")
     }
     return ctx.Reply("Type /help to see available commands")
