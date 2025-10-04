@@ -145,6 +145,11 @@ Request → Recovery → Logging → Permission → Handler → Response
 | **Permission** | 自动加载用户 | 无需手动查询 |
 | **RateLimit** | 令牌桶限流 | 防止滥用 |
 
+**重要改进**：
+- ✅ **错误处理增强** - Permission/Group 中间件在用户/群组创建失败时返回错误，而非注入默认对象，确保数据一致性
+- ✅ **资源自动清理** - RateLimiter 自动清理未活跃用户数据，防止内存泄漏
+- ⚠️ **优雅关闭** - 使用 RateLimiter 时，必须在关闭时调用 `rateLimiter.Stop()` 以避免 goroutine 泄漏
+
 ### 🏗️ 架构设计
 
 采用 **Handler 模式** + **中间件链** 的清晰架构：
@@ -473,6 +478,52 @@ func (m *TimingMiddleware) Middleware() handler.Middleware {
 // cmd/bot/main.go
 router.Use(middleware.NewTimingMiddleware(appLogger).Middleware())
 ```
+
+### Context 传递与 Repository 使用
+
+**重要变更**：所有 Repository 方法现在都需要 `context.Context` 作为第一个参数，用于请求取消、超时控制和链路追踪。
+
+#### Repository 接口示例
+
+```go
+// internal/domain/user/user.go
+type Repository interface {
+    FindByID(ctx context.Context, id int64) (*User, error)
+    Save(ctx context.Context, user *User) error
+    Update(ctx context.Context, user *User) error
+    // ... 其他方法
+}
+```
+
+#### 在 Handler 中使用
+
+```go
+func (h *MyHandler) Handle(ctx *handler.Context) error {
+    // 创建请求上下文（TODO: 未来会从 handler.Context 传递）
+    reqCtx := context.TODO()
+
+    // 使用 context 调用 Repository
+    user, err := h.userRepo.FindByID(reqCtx, ctx.UserID)
+    if err != nil {
+        return err
+    }
+
+    // 更新用户
+    user.LastActive = time.Now()
+    if err := h.userRepo.Update(reqCtx, user); err != nil {
+        return err
+    }
+
+    return ctx.Reply("Success")
+}
+```
+
+#### 最佳实践
+
+- ✅ **总是传递 context** - 所有 Repository 方法都需要 context
+- ✅ **使用 context.TODO()** - 在 handler 中创建上下文（临时方案，未来会改进）
+- ✅ **设置超时** - Repository 实现内部会自动添加超时控制
+- ⚠️ **不要使用 context.Background()** - 会破坏取消信号链
 
 ---
 

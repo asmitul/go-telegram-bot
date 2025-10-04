@@ -560,3 +560,94 @@
   - 优雅关闭时停止所有定时任务
   - 完整的单元测试（11个测试，100%通过）
   - 测试覆盖：时间解析、任务执行、错误处理、并发安全、优雅关闭
+
+---
+
+## 🔧 第五阶段：逻辑问题修复与优化 (2025-10-04)
+
+### ✔️ Module 32: 架构优化 - Context 传递与错误处理 (已完成)
+
+**完成时间**: 2025-10-04
+**修复问题数**: 21 个逻辑问题（分为 P0/P1/P2 三个优先级）
+
+#### 高优先级 (P0) 修复
+
+1. **Repository 层 Context 传递缺失**
+   - 所有 Repository 接口方法添加 `context.Context` 作为第一个参数
+   - 实现请求取消、超时控制、链路追踪支持
+   - 影响文件: `internal/domain/user/user.go`, `internal/domain/group/group.go`
+   - 影响范围: 所有 Repository 实现和调用点 (50+ 文件)
+
+2. **Middleware 错误处理优化**
+   - Permission/Group 中间件在创建失败时返回错误，而非注入默认对象
+   - 确保数据库与内存状态一致性
+   - 影响文件: `internal/middleware/permission.go`, `internal/middleware/group.go`
+
+3. **BaseCommand 群组检查逻辑修复**
+   - 修正了数据库错误时的处理逻辑（原本会继续执行，现在会阻止）
+   - 群组不存在时正确处理（由中间件创建）
+   - 影响文件: `internal/handlers/command/base.go`
+
+4. **权限系统自我修改防护**
+   - `/setperm` 命令禁止用户修改自己的权限
+   - 防止权限系统被滥用
+   - 影响文件: `internal/handlers/command/setperm.go`
+
+#### 中优先级 (P1) 修复
+
+5. **RateLimiter 资源泄漏修复**
+   - 添加自动清理机制（每小时清理一次，清理 24 小时未活跃用户）
+   - 添加 `Stop()` 方法用于优雅关闭
+   - 防止 goroutine 泄漏和内存无限增长
+   - 影响文件: `internal/middleware/ratelimit.go`
+
+6. **AnalyticsHandler 清理优化**
+   - 添加清理间隔限制（最小 10 分钟）
+   - 防止高并发下频繁清理影响性能
+   - 影响文件: `internal/handlers/listener/analytics.go`
+
+7. **Router 错误处理优化**
+   - 改进错误日志和注释
+   - 区分用户级错误和系统级错误
+   - 影响文件: `internal/handler/router.go`
+
+#### 低优先级 (P2) 修复
+
+8. **Recovery Middleware 错误包装改进**
+   - 改进 panic 恢复后的错误类型处理
+   - 保留原始错误类型信息
+   - 影响文件: `internal/middleware/recovery.go`
+
+9. **Scheduler Context 处理优化**
+   - 正确继承 scheduler context 以支持任务取消
+   - 确保优雅关闭时任务能正确停止
+   - 影响文件: `internal/scheduler/scheduler.go`
+
+10. **Context.values 并发安全文档**
+    - 添加详细的并发安全说明
+    - 明确单 goroutine 使用场景
+    - 影响文件: `internal/handler/context.go`
+
+11. **索引创建失败处理优化**
+    - 改进错误日志级别（CRITICAL）
+    - 添加详细的失败处理建议
+    - 影响文件: `cmd/bot/main.go`
+
+#### 测试结果
+
+- ✅ 所有测试通过 (7 个包, 100% 成功率)
+- ✅ 构建成功
+- ✅ 无回归问题
+
+#### 文档更新
+
+- ✅ README.md - 添加 Context 传递和中间件改进说明
+- ✅ docs/middleware-guide.md - 添加错误处理模式和 RateLimiter.Stop() 说明
+- ✅ docs/repository-guide.md - 添加 Context 传递最佳实践
+- ✅ CHANGELOG.md - 详细记录所有修复（新增）
+
+#### 技术债务清理
+
+- 标记了清理任务的技术债务（当前只记录不删除）
+- 添加了未来优化点的 TODO 注释
+- 改进了代码可维护性和可读性

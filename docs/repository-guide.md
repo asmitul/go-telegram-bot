@@ -115,11 +115,12 @@ func NewMyEntity(id int64, name string) *MyEntity {
 }
 
 // Repository 接口
+// ⚠️ 重要：所有方法的第一个参数都是 context.Context
 type Repository interface {
-    FindByID(id int64) (*MyEntity, error)
-    Save(entity *MyEntity) error
-    Update(entity *MyEntity) error
-    Delete(id int64) error
+    FindByID(ctx context.Context, id int64) (*MyEntity, error)
+    Save(ctx context.Context, entity *MyEntity) error
+    Update(ctx context.Context, entity *MyEntity) error
+    Delete(ctx context.Context, id int64) error
 }
 ```
 
@@ -180,12 +181,14 @@ func (r *MyEntityRepository) toDomain(doc *myEntityDocument) *myentity.MyEntity 
     }
 }
 
-func (r *MyEntityRepository) FindByID(id int64) (*myentity.MyEntity, error) {
-    ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+// ⚠️ 重要：接收 context.Context 作为第一个参数
+func (r *MyEntityRepository) FindByID(ctx context.Context, id int64) (*myentity.MyEntity, error) {
+    // 基于传入的 context 创建带超时的新 context
+    reqCtx, cancel := context.WithTimeout(ctx, r.timeout)
     defer cancel()
 
     var doc myEntityDocument
-    err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&doc)
+    err := r.collection.FindOne(reqCtx, bson.M{"_id": id}).Decode(&doc)
     if err != nil {
         if err == mongo.ErrNoDocuments {
             return nil, myentity.ErrNotFound
@@ -196,12 +199,13 @@ func (r *MyEntityRepository) FindByID(id int64) (*myentity.MyEntity, error) {
     return r.toDomain(&doc), nil
 }
 
-func (r *MyEntityRepository) Save(e *myentity.MyEntity) error {
-    ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *MyEntityRepository) Save(ctx context.Context, e *myentity.MyEntity) error {
+    // 基于传入的 context 创建带超时的新 context
+    reqCtx, cancel := context.WithTimeout(ctx, r.timeout)
     defer cancel()
 
     doc := r.toDocument(e)
-    _, err := r.collection.InsertOne(ctx, doc)
+    _, err := r.collection.InsertOne(reqCtx, doc)
     return err
 }
 ```
@@ -213,6 +217,87 @@ func (r *MyEntityRepository) Save(e *myentity.MyEntity) error {
 ```go
 // 初始化仓储
 myEntityRepo := mongodb.NewMyEntityRepository(db)
+```
+
+### 步骤 4：在 Handler 中使用
+
+```go
+func (h *MyHandler) Handle(ctx *handler.Context) error {
+    // 创建请求上下文
+    // TODO: 未来会直接从 handler.Context 传递
+    reqCtx := context.TODO()
+
+    // 使用 Repository
+    entity, err := h.myEntityRepo.FindByID(reqCtx, 12345)
+    if err != nil {
+        return err
+    }
+
+    // 更新实体
+    entity.Name = "New Name"
+    if err := h.myEntityRepo.Update(reqCtx, entity); err != nil {
+        return err
+    }
+
+    return ctx.Reply("Success")
+}
+```
+
+---
+
+## Context 传递最佳实践
+
+### 为什么需要 Context？
+
+从 v2.0 开始，所有 Repository 方法都需要 `context.Context` 作为第一个参数。这带来了以下好处：
+
+1. **请求取消** - 当用户取消请求时，数据库操作也会被取消
+2. **超时控制** - 防止慢查询阻塞整个系统
+3. **链路追踪** - 可以在 context 中传递 request ID、trace ID 等
+4. **资源管理** - 确保连接和事务正确释放
+
+### 正确的 Context 传递模式
+
+```go
+// ✅ 正确：基于传入的 context 创建新的带超时 context
+func (r *Repository) FindByID(ctx context.Context, id int64) (*Entity, error) {
+    reqCtx, cancel := context.WithTimeout(ctx, r.timeout)
+    defer cancel()
+
+    return r.collection.FindOne(reqCtx, bson.M{"_id": id})
+}
+
+// ❌ 错误：直接使用 context.Background()（破坏取消链）
+func (r *Repository) FindByID(ctx context.Context, id int64) (*Entity, error) {
+    reqCtx, cancel := context.WithTimeout(context.Background(), r.timeout)
+    defer cancel()
+
+    return r.collection.FindOne(reqCtx, bson.M{"_id": id})
+}
+```
+
+### Handler 中的 Context 使用
+
+当前阶段，在 Handler 中使用 `context.TODO()` 创建上下文：
+
+```go
+func (h *MyHandler) Handle(ctx *handler.Context) error {
+    // 临时方案：使用 context.TODO()
+    reqCtx := context.TODO()
+
+    user, err := h.userRepo.FindByID(reqCtx, ctx.UserID)
+    // ...
+}
+```
+
+**未来改进**：handler.Context 将包含一个 `context.Context` 字段，可以直接传递：
+
+```go
+// 未来版本（计划中）
+func (h *MyHandler) Handle(ctx *handler.Context) error {
+    user, err := h.userRepo.FindByID(ctx.Ctx, ctx.UserID)
+    // ...
+}
 ```
 
 ---

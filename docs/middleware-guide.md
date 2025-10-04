@@ -273,11 +273,24 @@ func (m *PermissionMiddleware) Middleware() handler.Middleware {
 }
 ```
 
-**特点**：
-- ✅ 自动创建新用户
-- ✅ 默认权限为普通用户
-- ✅ 处理器可以直接使用 `ctx.User`
-- ✅ 权限检查由处理器自己执行
+**重要改进**（v2.0）：
+- ✅ **错误处理增强** - 创建用户失败时返回错误，而非注入默认对象
+- ✅ **数据一致性** - 避免内存与数据库状态不一致
+- ✅ **Context 传递** - 所有 Repository 方法现在都需要 `context.Context` 参数
+- ✅ **详细错误日志** - 区分 "用户不存在" 和 "数据库错误"
+
+**新版本逻辑**：
+```go
+// ✅ 正确：创建失败时返回错误
+if err := m.userRepo.Save(reqCtx, u); err != nil {
+    m.logger.Error("failed_to_create_user", "error", err)
+    return fmt.Errorf("failed to create user: %w", err)
+}
+
+// ❌ 旧版本（已废弃）：注入默认对象继续执行
+// u = user.NewDefaultUser()
+// ctx.User = u  // 危险：内存中有用户，但数据库中没有
+```
 
 ### 4. RateLimitMiddleware（限流控制）
 
@@ -307,6 +320,32 @@ limiter := middleware.NewSimpleRateLimiter(
 )
 router.Use(middleware.NewRateLimitMiddleware(limiter).Middleware())
 ```
+
+**⚠️ 重要：资源清理与优雅关闭**
+
+RateLimiter 内部启动了一个 goroutine 用于自动清理未活跃用户数据。为了避免 goroutine 泄漏，**必须在程序关闭时调用 `Stop()` 方法**：
+
+```go
+// 创建限流器
+rateLimiter := middleware.NewSimpleRateLimiter(time.Second, 5)
+router.Use(middleware.NewRateLimitMiddleware(rateLimiter).Middleware())
+
+// 在 shutdown 函数中停止限流器
+func shutdown() {
+    // ... 其他清理代码
+
+    // ⚠️ 停止 RateLimiter 的清理 goroutine
+    if rateLimiter != nil {
+        rateLimiter.Stop()
+        appLogger.Info("✅ RateLimiter stopped")
+    }
+}
+```
+
+**自动清理机制**：
+- 每小时自动清理一次未活跃用户数据
+- 清理条件：超过 24 小时未发送消息的用户
+- 防止内存无限增长
 
 ---
 
