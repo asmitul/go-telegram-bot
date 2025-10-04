@@ -124,8 +124,41 @@ func (r *UserRepository) Update(u *user.User) error {
 	filter := bson.M{"_id": u.ID}
 	update := bson.M{"$set": doc}
 
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
+	result, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return user.ErrUserNotFound
+	}
+
+	return nil
+}
+
+// UpdatePermission 更新用户在特定群组的权限（细粒度更新，避免并发冲突）
+func (r *UserRepository) UpdatePermission(userID int64, groupID int64, perm user.Permission) error {
+	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+	defer cancel()
+
+	filter := bson.M{"_id": userID}
+	update := bson.M{
+		"$set": bson.M{
+			fmt.Sprintf("permissions.%d", groupID): int(perm),
+			"updated_at":                           time.Now(),
+		},
+	}
+
+	result, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return user.ErrUserNotFound
+	}
+
+	return nil
 }
 
 // Delete 删除用户

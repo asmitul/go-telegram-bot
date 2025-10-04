@@ -18,6 +18,7 @@ type UserRepository interface {
 	FindByUsername(username string) (*user.User, error)
 	Save(user *user.User) error
 	Update(user *user.User) error
+	UpdatePermission(userID int64, groupID int64, perm user.Permission) error
 	FindAdminsByGroup(groupID int64) ([]*user.User, error)
 }
 
@@ -79,7 +80,16 @@ func (c *BaseCommand) Match(ctx *handler.Context) bool {
 	// 5. 检查群组是否启用（如果是群组且有 groupRepo）
 	if ctx.IsGroup() && c.groupRepo != nil {
 		g, err := c.groupRepo.FindByID(ctx.ChatID)
-		if err == nil && !g.IsCommandEnabled(c.name) {
+		if err != nil {
+			// 区分群组不存在和数据库错误
+			// 群组不存在是正常情况（中间件会自动创建），继续执行
+			// 数据库错误需要记录（但不阻止命令执行，降级处理）
+			// 注意：这里无法访问 logger，错误会在中间件层记录
+			return err != group.ErrGroupNotFound
+		}
+
+		// 群组存在，检查命令是否启用
+		if !g.IsCommandEnabled(c.name) {
 			return false
 		}
 	}

@@ -55,6 +55,11 @@ func (m *MockUserRepository) Update(u *user.User) error {
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) UpdatePermission(userID int64, groupID int64, perm user.Permission) error {
+	args := m.Called(userID, groupID, perm)
+	return args.Error(0)
+}
+
 func (m *MockUserRepository) FindAdminsByGroup(groupID int64) ([]*user.User, error) {
 	args := m.Called(groupID)
 	if args.Get(0) == nil {

@@ -61,19 +61,32 @@ func (h *SetPermHandler) Handle(ctx *handler.Context) error {
 	// 4. 查找用户
 	targetUser, err := h.userRepo.FindByUsername(username)
 	if err != nil {
-		return ctx.Reply(fmt.Sprintf("❌ 用户 @%s 不存在", username))
+		// 包装错误，避免暴露数据库细节
+		if err == user.ErrUserNotFound {
+			return ctx.Reply(fmt.Sprintf("❌ 用户 @%s 不存在或未使用过此机器人", username))
+		}
+		return ctx.Reply("❌ 查询用户失败，请稍后重试")
 	}
 
 	// 5. 获取当前权限
 	currentPerm := targetUser.GetPermission(ctx.ChatID)
 
-	// 6. 设置新权限
-	targetUser.SetPermission(ctx.ChatID, newPerm)
+	// 5.1. 权限保护：不能修改同级或更高级别的用户（除非是自己）
+	executorPerm := ctx.User.GetPermission(ctx.ChatID)
+	if targetUser.ID != ctx.UserID && currentPerm >= executorPerm {
+		return ctx.ReplyHTML(fmt.Sprintf("❌ 您无权修改 <b>%s</b> 的权限\n目标权限: <b>%s</b>，您的权限: <b>%s</b>",
+			FormatUsername(targetUser),
+			currentPerm.String(),
+			executorPerm.String()))
+	}
 
-	// 7. 保存到数据库
-	if err := h.userRepo.Update(targetUser); err != nil {
+	// 6. 保存到数据库（使用细粒度更新避免并发冲突）
+	if err := h.userRepo.UpdatePermission(targetUser.ID, ctx.ChatID, newPerm); err != nil {
 		return ctx.Reply("❌ 权限更新失败，请稍后重试")
 	}
+
+	// 7. 更新本地对象（用于显示）
+	targetUser.SetPermission(ctx.ChatID, newPerm)
 
 	// 8. 成功反馈
 	if currentPerm == newPerm {

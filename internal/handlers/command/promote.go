@@ -55,13 +55,13 @@ func (h *PromoteHandler) Handle(ctx *handler.Context) error {
 			newPerm.String(), ctx.User.GetPermission(ctx.ChatID).String()))
 	}
 
-	// 6. 设置新权限
-	targetUser.SetPermission(ctx.ChatID, newPerm)
-
-	// 7. 保存到数据库
-	if err := h.userRepo.Update(targetUser); err != nil {
+	// 6. 保存到数据库（使用细粒度更新避免并发冲突）
+	if err := h.userRepo.UpdatePermission(targetUser.ID, ctx.ChatID, newPerm); err != nil {
 		return ctx.Reply("❌ 权限更新失败，请稍后重试")
 	}
+
+	// 7. 更新本地对象（用于显示）
+	targetUser.SetPermission(ctx.ChatID, newPerm)
 
 	// 8. 成功反馈
 	return ctx.ReplyHTML(fmt.Sprintf("✅ 用户 <b>%s</b> 权限已提升:\n<b>%s</b> → <b>%s</b> %s",

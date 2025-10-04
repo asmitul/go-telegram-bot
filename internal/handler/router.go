@@ -37,6 +37,9 @@ func (r *Router) Register(h Handler) {
 // Use 注册全局中间件
 // 中间件会应用到所有匹配的处理器
 func (r *Router) Use(mw Middleware) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	r.middlewares = append(r.middlewares, mw)
 }
 
@@ -48,6 +51,7 @@ func (r *Router) Route(ctx *Context) error {
 	r.mu.RUnlock()
 
 	var lastErr error
+	matchedCount := 0
 
 	// 遍历所有处理器，执行匹配的
 	for _, h := range handlers {
@@ -55,6 +59,8 @@ func (r *Router) Route(ctx *Context) error {
 		if !h.Match(ctx) {
 			continue
 		}
+
+		matchedCount++
 
 		// 构建中间件链
 		handler := r.buildChain(h)
@@ -64,11 +70,11 @@ func (r *Router) Route(ctx *Context) error {
 			lastErr = err
 
 			// 如果处理器不继续链，立即返回错误
-			// 如果处理器继续链（如监听器），记录错误但继续执行
+			// 如果处理器继续链（如监听器），错误已在日志中间件记录
 			if !h.ContinueChain() {
 				return err
 			}
-			// 否则继续执行下一个处理器
+			// 否则继续执行下一个处理器（错误已被记录）
 		}
 
 		// 检查是否继续链
@@ -77,6 +83,7 @@ func (r *Router) Route(ctx *Context) error {
 		}
 	}
 
+	// 如果没有处理器匹配，返回 nil（不是错误）
 	return lastErr
 }
 

@@ -64,18 +64,26 @@ func NewUser(id int64, username, firstName, lastName string) *User {
 }
 
 // GetPermission 获取用户在特定群组的权限
+// 返回全局权限和群组权限中的较高值
 func (u *User) GetPermission(groupID int64) Permission {
-	// 先检查全局权限（groupID = 0）
+	globalPerm := PermissionUser
+	groupPerm := PermissionUser
+
+	// 检查全局权限（groupID = 0）
 	if perm, ok := u.Permissions[0]; ok {
-		return perm
+		globalPerm = perm
 	}
 
-	// 再检查群组特定权限
+	// 检查群组特定权限
 	if perm, ok := u.Permissions[groupID]; ok {
-		return perm
+		groupPerm = perm
 	}
 
-	return PermissionUser
+	// 返回两者中的较高权限
+	if globalPerm > groupPerm {
+		return globalPerm
+	}
+	return groupPerm
 }
 
 // SetPermission 设置用户在特定群组的权限
@@ -105,6 +113,7 @@ type Repository interface {
 	FindByUsername(username string) (*User, error)
 	Save(user *User) error
 	Update(user *User) error
+	UpdatePermission(userID int64, groupID int64, perm Permission) error // 细粒度权限更新，避免并发冲突
 	Delete(id int64) error
 	FindAdminsByGroup(groupID int64) ([]*User, error)
 }
