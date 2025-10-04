@@ -64,9 +64,13 @@ func main() {
 	// 3.1. 创建数据库索引（性能优化）
 	indexManager := mongodb.NewIndexManager(db, appLogger)
 	if err := indexManager.EnsureIndexes(context.Background()); err != nil {
-		appLogger.Warn("Failed to create indexes (continuing anyway)", "error", err)
+		// 索引创建失败可能严重影响性能
+		// 如果是关键索引失败，应该考虑退出而不是继续运行
+		appLogger.Error("⚠️  CRITICAL: Failed to create database indexes", "error", err)
+		appLogger.Warn("Bot will continue running, but performance may be degraded")
+		appLogger.Warn("Please check database permissions and index definitions")
 	} else {
-		appLogger.Info("✅ Database indexes created")
+		appLogger.Info("✅ Database indexes created successfully")
 	}
 
 	// 4. 初始化仓储
@@ -202,6 +206,15 @@ func shutdown(appLogger logger.Logger, mongoClient *mongo.Client, taskScheduler 
 	appLogger.Info("Stopping scheduler...")
 	taskScheduler.Stop()
 	appLogger.Info("✅ Scheduler stopped")
+
+	// 2.5. 停止 RateLimiter（如果启用）
+	// 注意：如果启用了 RateLimiter，需要在此处调用 rateLimiter.Stop()
+	// 否则会导致 goroutine 泄漏
+	// 示例：
+	// if rateLimiter != nil {
+	//     rateLimiter.Stop()
+	//     appLogger.Info("✅ RateLimiter stopped")
+	// }
 
 	// 3. 等待正在处理的命令完成（最多30秒）
 	done := make(chan struct{})

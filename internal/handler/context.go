@@ -42,6 +42,10 @@ type Context struct {
 	ReplyTo *ReplyInfo
 
 	// 上下文存储（用于处理器之间传递数据）
+	// 注意：此 map 不是并发安全的。
+	// 在当前架构中，每个消息处理在独立的 goroutine 中进行，
+	// Context 不会跨 goroutine 共享，因此是安全的。
+	// 如果需要跨 goroutine 使用，请自行添加同步机制。
 	values map[string]interface{}
 }
 
@@ -69,6 +73,7 @@ func (c *Context) IsChannel() bool {
 }
 
 // Set 在上下文中存储值
+// 注意：不是并发安全的，不要跨 goroutine 调用
 func (c *Context) Set(key string, value interface{}) {
 	if c.values == nil {
 		c.values = make(map[string]interface{})
@@ -77,6 +82,7 @@ func (c *Context) Set(key string, value interface{}) {
 }
 
 // Get 从上下文中获取值
+// 注意：不是并发安全的，不要跨 goroutine 调用
 func (c *Context) Get(key string) (interface{}, bool) {
 	if c.values == nil {
 		return nil, false

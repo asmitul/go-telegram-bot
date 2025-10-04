@@ -127,7 +127,9 @@ func (s *Scheduler) runJob(job Job) {
 
 	s.logger.Info("Job started", "name", job.Name(), "interval", interval)
 
-	// 立即执行一次
+	// 立即执行一次（同步）
+	// 注意：如果任务执行时间较长，会阻塞定时器启动
+	// 但可以确保 context 取消信号正确传递
 	s.executeJob(job)
 
 	for {
@@ -147,6 +149,8 @@ func (s *Scheduler) executeJob(job Job) {
 	s.logger.Info("Job executing", "name", job.Name())
 
 	// 创建带超时的 context（任务最多执行5分钟）
+	// 继承 s.ctx，这样当 scheduler 停止时，长时间运行的任务会被取消
+	// 同时保证正常情况下任务有足够时间完成
 	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Minute)
 	defer cancel()
 
