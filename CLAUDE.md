@@ -63,6 +63,7 @@ func (h *MyCommandHandler) Handle(ctx *handler.Context) error {
 - Extract matched groups for processing
 - Support multi-language patterns
 - Can stop chain after matching
+- Examples: WeatherHandler (300), CalculatorHandler (310)
 
 **Listeners** (`handlers/listener/`, Priority: 900-999)
 - Match ALL messages
@@ -328,6 +329,65 @@ func (h *WeatherHandler) Priority() int { return 300 }
 func (h *WeatherHandler) ContinueChain() bool { return false }
 ```
 
+**Calculator Example (with Group Feature Check):**
+
+```go
+// internal/handlers/pattern/calculator.go
+package pattern
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+	"telegram-bot/internal/domain/group"
+	"telegram-bot/internal/handler"
+)
+
+type CalculatorHandler struct {
+	pattern   *regexp.Regexp
+	groupRepo GroupRepository
+}
+
+func NewCalculatorHandler(groupRepo GroupRepository) *CalculatorHandler {
+	return &CalculatorHandler{
+		pattern:   regexp.MustCompile(`^[\d\s\.\+\-\*/\(\)]+$`),
+		groupRepo: groupRepo,
+	}
+}
+
+func (h *CalculatorHandler) Match(ctx *handler.Context) bool {
+	// Check chat type (group/supergroup only)
+	if !ctx.IsGroup() {
+		return false
+	}
+
+	// Check pattern
+	if !h.pattern.MatchString(ctx.Text) {
+		return false
+	}
+
+	// Check if feature is enabled in group
+	reqCtx := context.TODO()
+	g, err := h.groupRepo.FindByID(reqCtx, ctx.ChatID)
+	if err != nil {
+		return err == group.ErrGroupNotFound // Default enabled if group not found
+	}
+
+	return g.IsFeatureEnabled("calculator")
+}
+
+func (h *CalculatorHandler) Handle(ctx *handler.Context) error {
+	result, err := evaluateExpression(ctx.Text)
+	if err != nil {
+		return ctx.ReplyHTML(fmt.Sprintf("❌ %s", err.Error()))
+	}
+	return ctx.ReplyHTML(fmt.Sprintf("<code>%s</code> = <b>%s</b>", ctx.Text, formatNumber(result)))
+}
+
+func (h *CalculatorHandler) Priority() int { return 310 }
+func (h *CalculatorHandler) ContinueChain() bool { return false }
+```
+
 ### 4. Listener (Message Logger)
 
 ```go
@@ -447,10 +507,58 @@ Total: 3 admins
 Groups can disable specific commands:
 ```go
 group.DisableCommand("commandname", adminUserID)
-groupRepo.Update(group)
+groupRepo.Update(ctx, group)
 ```
 
 Commands automatically check this via `BaseCommand.Match()`.
+
+## Group Feature Management
+
+Groups can enable/disable specific features using the Settings system.
+
+### Built-in Features
+- `calculator` - Math expression calculator (default: enabled)
+
+### Managing Features
+
+**In Command Handler:**
+```go
+// Toggle feature
+if group.IsFeatureEnabled("calculator") {
+    group.DisableFeature("calculator")
+} else {
+    group.EnableFeature("calculator")
+}
+groupRepo.Update(ctx, group)
+```
+
+**In Pattern Handler:**
+```go
+// Check if feature is enabled
+func (h *MyHandler) Match(ctx *handler.Context) bool {
+    reqCtx := context.TODO()
+    g, err := h.groupRepo.FindByID(reqCtx, ctx.ChatID)
+    if err != nil {
+        return err == group.ErrGroupNotFound // Default enabled if group not found
+    }
+    return g.IsFeatureEnabled("calculator")
+}
+```
+
+### /togglecalc Command
+Admin+ can toggle calculator feature:
+- `/togglecalc` - Switch calculator on/off
+- Default: Enabled for all groups
+- Groups can disable to prevent automatic calculation
+
+**Example usage:**
+```
+Admin: /togglecalc
+Bot: ✅ 计算器功能已关闭
+
+当前状态：🚫 已关闭
+提示：群组成员发送数学表达式（如 1+2）时，机器人将不再自动计算并回复结果。
+```
 
 ## Configuration
 

@@ -102,6 +102,14 @@ func (h *HelpHandler) Handle(ctx *handler.Context) error {
 		sb.WriteString("\n")
 	}
 
+	// 自动功能说明
+	sb.WriteString("🤖 <b>自动功能</b>\n")
+	sb.WriteString("✅ <b>数学计算器</b> - 自动计算数学表达式\n")
+	sb.WriteString("   • 支持：加减乘除 (+, -, *, /)，括号\n")
+	sb.WriteString("   • 示例：<code>1+2</code>, <code>(10+5)*2</code>, <code>100/4</code>\n")
+	sb.WriteString("   • 管理：<code>/togglecalc</code> 开启/关闭（需要 Admin 权限）\n")
+	sb.WriteString("\n")
+
 	sb.WriteString("💡 提示：使用 <code>/命令名</code> 执行命令")
 
 	return ctx.ReplyHTML(sb.String())
